@@ -22,7 +22,8 @@
 hs_err_pid*
 
 
-
+*.iml
+.idea/
 
 
 target/
