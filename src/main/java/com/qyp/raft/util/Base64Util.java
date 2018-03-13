@@ -14,20 +14,24 @@
  * limitations under the License.
  */
 
-package com.qyp.raft;
+package com.qyp.raft.util;
+
+import java.util.Base64;
 
 /**
- * RAFT 协议中, 单个节点的状态, 一定是在 {@link ServerRole} 其中之一
- * 初始状态定为 FOLLOWER.
+ * 用于 base64 的压缩和解压
  *
  * @author yupeng.qin
- * @since 2018-03-12
+ * @since 2018-03-13
  */
-public enum ServerRole {
+public class Base64Util {
 
-    FOLLOWER,
+    public static final String encode(byte[] bb) {
+        return Base64.getEncoder().encodeToString(bb);
+    }
 
-    CANDIDATE,
+    public static final byte[] decode(String ss) {
+        return Base64.getDecoder().decode(ss);
+    }
 
-    LEADER;
 }
