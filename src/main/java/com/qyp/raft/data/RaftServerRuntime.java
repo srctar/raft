@@ -16,20 +16,18 @@
 
 package com.qyp.raft.data;
 
-import com.qyp.raft.RaftServerRole;
-
 /**
  * 当前服务器的节点信息.
  *
  * @author yupeng.qin
  * @since 2018-03-13
  */
-public class NodeStatus {
+public class RaftServerRuntime {
 
     /**
      * 在集群选举的时候用, 只有在 voteCount > 集群节点数 的时候, 节点角色才会有改变.
      *
-     * @see ClusterStatus#clusterMachine
+     * @see ClusterRuntime#clusterMachine
      */
     private int voteCount = 0;
 

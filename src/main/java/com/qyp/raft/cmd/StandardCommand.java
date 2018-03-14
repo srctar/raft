@@ -21,8 +21,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,7 +34,7 @@ import com.qyp.raft.util.Base64Util;
  * @author yupeng.qin
  * @since 2018-03-13
  */
-public class StandardCommand {
+public class StandardCommand implements Serializable {
 
     /**
      * 来源机器

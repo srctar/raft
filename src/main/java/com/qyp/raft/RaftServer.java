@@ -16,6 +16,8 @@
 
 package com.qyp.raft;
 
+import com.qyp.raft.data.RaftServerRole;
+
 /**
  * Raft 协议中的服务端, 可以是{@link RaftServerRole} 中的任意一个角色
  *

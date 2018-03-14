@@ -23,13 +23,15 @@ package com.qyp.raft.data;
  * @author yupeng.qin
  * @since 2018-03-13
  */
-public class ClusterStatus {
+public class ClusterRuntime {
 
     /**
      * 集群的机器数目.
      * 储存的数据为集群中的机器的 ip:port
      */
     private String[] clusterMachine;
+
+    private ClusterRole clusterRole;
 
     public String[] getClusterMachine() {
         return clusterMachine;

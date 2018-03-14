@@ -17,11 +17,11 @@
 package com.qyp.raft.rpc;
 
 import com.qyp.raft.LeaderElection;
-import com.qyp.raft.RaftServerRole;
+import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.cmd.StandardCommand;
-import com.qyp.raft.data.ClusterStatus;
-import com.qyp.raft.data.NodeStatus;
+import com.qyp.raft.data.ClusterRuntime;
+import com.qyp.raft.data.RaftServerRuntime;
 
 /**
  * 出来来自其它服务器的RPC请求
@@ -32,8 +32,8 @@ import com.qyp.raft.data.NodeStatus;
 public class RaftRpcReceive implements RaftRpcReceiveService {
 
     private LeaderElection leaderElection;
-    private ClusterStatus clusterStatus;
-    private NodeStatus nodeStatus;
+    private ClusterRuntime clusterRuntime;
+    private RaftServerRuntime raftServerRuntime;
 
     /**
      * 处理投票请求
@@ -41,11 +41,11 @@ public class RaftRpcReceive implements RaftRpcReceiveService {
      */
     @Override
     public RaftCommand dealWithVote(StandardCommand cmd) {
-        if (nodeStatus.getSelf().equalsIgnoreCase(cmd.getTarget())) {
+        if (raftServerRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             int idx = -1;
             f:
-            for (int i = 0; i < clusterStatus.getClusterMachine().length; i++) {
-                String clusterMachine = clusterStatus.getClusterMachine()[i];
+            for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
+                String clusterMachine = clusterRuntime.getClusterMachine()[i];
                 if (clusterMachine.equalsIgnoreCase(cmd.getResource())) {
                     idx = i;
                     break f;
@@ -62,21 +62,21 @@ public class RaftRpcReceive implements RaftRpcReceiveService {
      * 处理心跳请求,  一般情况而言, 有心跳, 则一定是来自Leader的心跳.
      * 心跳的作用, 也是为了保持集群健康度使用.
      *
-     * 心跳是经过了Leader端检测了的
+     * 心跳是经过了Leader端检测了的, 同时, Follower 可以告诉 Leader
      *
      * @param cmd   Leader的心跳
      */
     @Override
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
-        if (nodeStatus.getSelf().equalsIgnoreCase(cmd.getTarget())) {
+        if (raftServerRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             int term = Integer.valueOf(cmd.getTerm());
-            if (term >= nodeStatus.getTerm()) {
-                nodeStatus.setTerm(term);
-                nodeStatus.setLeader(cmd.getResource());
-                nodeStatus.setRole(RaftServerRole.FOLLOWER);
-                nodeStatus.setVoteCount(-1);
-                nodeStatus.setVoteFor(null);
+            if (term >= raftServerRuntime.getTerm()) {
+                raftServerRuntime.setTerm(term);
+                raftServerRuntime.setLeader(cmd.getResource());
+                raftServerRuntime.setRole(RaftServerRole.FOLLOWER);
+                raftServerRuntime.setVoteCount(-1);
+                raftServerRuntime.setVoteFor(null);
             }
         }
         return RaftCommand.APPEND_ENTRIES;

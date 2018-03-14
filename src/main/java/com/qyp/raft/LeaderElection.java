@@ -19,8 +19,9 @@ package com.qyp.raft;
 import java.io.IOException;
 
 import com.qyp.raft.cmd.RaftCommand;
-import com.qyp.raft.data.ClusterStatus;
-import com.qyp.raft.data.NodeStatus;
+import com.qyp.raft.data.ClusterRuntime;
+import com.qyp.raft.data.RaftServerRuntime;
+import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -42,8 +43,8 @@ public class LeaderElection implements Runnable {
 
     private static final Object LOCK = new Object();
 
-    private NodeStatus nodeStatus;
-    private ClusterStatus clusterStatus;
+    private RaftServerRuntime raftServerRuntime;
+    private ClusterRuntime clusterRuntime;
 
     private RaftRpcLaunchService raftRpcLaunchService;
     private CommunicateFollower communicateFollower;
@@ -65,12 +66,12 @@ public class LeaderElection implements Runnable {
      * @param node 发起申请投票的机器
      */
     public RaftCommand dealWithVote(String node) {
-        if (nodeStatus.getRole() == RaftServerRole.FOLLOWER) {
-            if (nodeStatus.getVoteFor() == null) {
+        if (raftServerRuntime.getRole() == RaftServerRole.FOLLOWER) {
+            if (raftServerRuntime.getVoteFor() == null) {
                 synchronized(LOCK) {
-                    if (nodeStatus.getVoteFor() == null
-                            && nodeStatus.getRole() == RaftServerRole.FOLLOWER) {
-                        nodeStatus.setVoteFor(node);
+                    if (raftServerRuntime.getVoteFor() == null
+                            && raftServerRuntime.getRole() == RaftServerRole.FOLLOWER) {
+                        raftServerRuntime.setVoteFor(node);
                         return RaftCommand.ACCEPT;
                     }
                 }
@@ -84,35 +85,35 @@ public class LeaderElection implements Runnable {
      */
     public void requestVote() {
 
-        if (nodeStatus.getRole() != RaftServerRole.FOLLOWER) {
+        if (raftServerRuntime.getRole() != RaftServerRole.FOLLOWER) {
             return;
         }
 
-        nodeStatus.setRole(RaftServerRole.CANDIDATE);
-        nodeStatus.setVoteFor(nodeStatus.getSelf());
-        nodeStatus.setVoteCount(1);
-        nodeStatus.setTerm(nodeStatus.getTerm() + 1);
+        raftServerRuntime.setRole(RaftServerRole.CANDIDATE);
+        raftServerRuntime.setVoteFor(raftServerRuntime.getSelf());
+        raftServerRuntime.setVoteCount(1);
+        raftServerRuntime.setTerm(raftServerRuntime.getTerm() + 1);
 
         // 终止条件为: 自己被选举成功/别的机器被选举成功
-        while (nodeStatus.getRole() == RaftServerRole.CANDIDATE) {
+        while (raftServerRuntime.getRole() == RaftServerRole.CANDIDATE) {
             f:
-            for (int i = 0; i < clusterStatus.getClusterMachine().length; i++) {
-                String clusterMachine = clusterStatus.getClusterMachine()[i];
+            for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
+                String clusterMachine = clusterRuntime.getClusterMachine()[i];
                 /*
                 给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
                  */
-                if (!clusterMachine.equalsIgnoreCase(nodeStatus.getSelf())
-                        && nodeStatus.getRole() == RaftServerRole.CANDIDATE) {
+                if (!clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())
+                        && raftServerRuntime.getRole() == RaftServerRole.CANDIDATE) {
                     try {
                         RaftCommand cmd = raftRpcLaunchService
-                                .requestVote(nodeStatus.getSelf(), clusterMachine, nodeStatus.getTerm());
+                                .requestVote(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
                         if (cmd == RaftCommand.ACCEPT) {
-                            nodeStatus.increaseVoteCount();
+                            raftServerRuntime.increaseVoteCount();
                             // 得到多数派的赞成 => 成为 Leader
                             // 同时周知 Leader 的状态信息
-                            if (nodeStatus.getVoteCount() > clusterStatus.getClusterMachine().length / 2) {
-                                nodeStatus.setRole(RaftServerRole.LEADER);
-                                nodeStatus.setLeader(nodeStatus.getSelf());
+                            if (raftServerRuntime.getVoteCount() > clusterRuntime.getClusterMachine().length / 2) {
+                                raftServerRuntime.setRole(RaftServerRole.LEADER);
+                                raftServerRuntime.setLeader(raftServerRuntime.getSelf());
 
                                 communicateFollower.heartBeat();
                                 break f;

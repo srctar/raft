@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.qyp.raft;
+package com.qyp.raft.data;
 
 /**
  * RAFT 协议中, 单个节点的状态, 一定是在 {@link RaftServerRole} 其中之一

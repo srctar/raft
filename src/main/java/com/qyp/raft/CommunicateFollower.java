@@ -18,8 +18,8 @@ package com.qyp.raft;
 
 import java.io.IOException;
 
-import com.qyp.raft.data.ClusterStatus;
-import com.qyp.raft.data.NodeStatus;
+import com.qyp.raft.data.ClusterRuntime;
+import com.qyp.raft.data.RaftServerRuntime;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -30,19 +30,19 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
  */
 public class CommunicateFollower {
 
-    private NodeStatus nodeStatus;
-    private ClusterStatus clusterStatus;
+    private RaftServerRuntime raftServerRuntime;
+    private ClusterRuntime clusterRuntime;
 
     private RaftRpcLaunchService raftRpcLaunchService;
 
     public void heartBeat() {
         f:
-        for (int i = 0; i < clusterStatus.getClusterMachine().length; i++) {
-            String clusterMachine = clusterStatus.getClusterMachine()[i];
-            if (!clusterMachine.equalsIgnoreCase(nodeStatus.getSelf())) {
+        for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
+            String clusterMachine = clusterRuntime.getClusterMachine()[i];
+            if (!clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())) {
                 try {
                     raftRpcLaunchService
-                            .notifyFollower(nodeStatus.getSelf(), clusterMachine, nodeStatus.getTerm());
+                            .notifyFollower(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
                 } catch (IOException e) {
                 }
             }
