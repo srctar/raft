@@ -35,6 +35,13 @@ public class CommunicateFollower {
 
     private RaftRpcLaunchService raftRpcLaunchService;
 
+    public CommunicateFollower(RaftServerRuntime raftServerRuntime, ClusterRuntime clusterRuntime,
+                               RaftRpcLaunchService raftRpcLaunchService) {
+        this.raftServerRuntime = raftServerRuntime;
+        this.clusterRuntime = clusterRuntime;
+        this.raftRpcLaunchService = raftRpcLaunchService;
+    }
+
     public void heartBeat() {
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {

@@ -19,7 +19,7 @@ package com.qyp.raft;
 import com.qyp.raft.data.RaftServerRole;
 
 /**
- * Raft 协议中的服务端, 可以是{@link RaftServerRole} 中的任意一个角色
+ * Raft 协议中的启动端, 可以是{@link RaftServerRole} 中的任意一个角色
  *
  * @author yupeng.qin
  * @since 2018-03-13

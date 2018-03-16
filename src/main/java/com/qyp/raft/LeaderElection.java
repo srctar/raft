@@ -19,9 +19,10 @@ package com.qyp.raft;
 import java.io.IOException;
 
 import com.qyp.raft.cmd.RaftCommand;
+import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
-import com.qyp.raft.data.RaftServerRuntime;
 import com.qyp.raft.data.RaftServerRole;
+import com.qyp.raft.data.RaftServerRuntime;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -39,7 +40,7 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
  * @author yupeng.qin
  * @since 2018-03-13
  */
-public class LeaderElection implements Runnable {
+public class LeaderElection {
 
     private static final Object LOCK = new Object();
 
@@ -49,14 +50,12 @@ public class LeaderElection implements Runnable {
     private RaftRpcLaunchService raftRpcLaunchService;
     private CommunicateFollower communicateFollower;
 
-    /**
-     * 是否接受来自其它服务器的选举申请
-     */
-    private boolean beginToAcceptOtherVote;
-
-    @Override
-    public void run() {
-
+    public LeaderElection(RaftServerRuntime raftServerRuntime, ClusterRuntime clusterRuntime,
+                          RaftRpcLaunchService raftRpcLaunchService, CommunicateFollower communicateFollower) {
+        this.raftServerRuntime = raftServerRuntime;
+        this.clusterRuntime = clusterRuntime;
+        this.raftRpcLaunchService = raftRpcLaunchService;
+        this.communicateFollower = communicateFollower;
     }
 
     /**
@@ -89,38 +88,47 @@ public class LeaderElection implements Runnable {
             return;
         }
 
+        /**
+         * 集群状态变更为选举中
+         */
+        clusterRuntime.setClusterRole(ClusterRole.ELECTION);
+
         raftServerRuntime.setRole(RaftServerRole.CANDIDATE);
         raftServerRuntime.setVoteFor(raftServerRuntime.getSelf());
         raftServerRuntime.setVoteCount(1);
         raftServerRuntime.setTerm(raftServerRuntime.getTerm() + 1);
 
         // 终止条件为: 自己被选举成功/别的机器被选举成功
+        // 角色的变更是由 自身/其它的节点(选举线程) 所改变的
         while (raftServerRuntime.getRole() == RaftServerRole.CANDIDATE) {
             f:
             for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
                 String clusterMachine = clusterRuntime.getClusterMachine()[i];
+                if (raftServerRuntime.getRole() != RaftServerRole.CANDIDATE) {
+                    break f;
+                }
+                if (clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())) {
+                    continue f;
+                }
                 /*
                 给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
                  */
-                if (!clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())
-                        && raftServerRuntime.getRole() == RaftServerRole.CANDIDATE) {
-                    try {
-                        RaftCommand cmd = raftRpcLaunchService
-                                .requestVote(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
-                        if (cmd == RaftCommand.ACCEPT) {
-                            raftServerRuntime.increaseVoteCount();
-                            // 得到多数派的赞成 => 成为 Leader
-                            // 同时周知 Leader 的状态信息
-                            if (raftServerRuntime.getVoteCount() > clusterRuntime.getClusterMachine().length / 2) {
-                                raftServerRuntime.setRole(RaftServerRole.LEADER);
-                                raftServerRuntime.setLeader(raftServerRuntime.getSelf());
+                try {
+                    RaftCommand cmd = raftRpcLaunchService
+                            .requestVote(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
+                    if (cmd == RaftCommand.ACCEPT) {
+                        raftServerRuntime.increaseVoteCount();
+                        // 得到多数派的赞成 => 成为 Leader
+                        // 同时周知 Leader 的状态信息
+                        if (raftServerRuntime.getVoteCount() > clusterRuntime.getClusterMachine().length / 2) {
+                            raftServerRuntime.setRole(RaftServerRole.LEADER);
+                            raftServerRuntime.setLeader(raftServerRuntime.getSelf());
 
-                                communicateFollower.heartBeat();
-                                break f;
-                            }
+                            communicateFollower.heartBeat();
+                            break f;
                         }
-                    } catch (IOException e) {
                     }
+                } catch (IOException e) {
                 }
             }
         }

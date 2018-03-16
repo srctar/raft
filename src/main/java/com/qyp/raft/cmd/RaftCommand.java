@@ -25,14 +25,26 @@ package com.qyp.raft.cmd;
 public enum RaftCommand {
 
     /**
-     * 请求被选举
+     * Leader 请求被选举
      */
     REQUEST_VOTE,
 
     /**
-     * 选举完毕之后, 周知 Follower。
+     * 选举完毕之后, 周知 Follower。 || Follower 同意选举
      */
     APPEND_ENTRIES,
+
+    /**
+     * Leader 发起心跳(选举周知、正常心跳)的时候, 如果 Follower 的集群依然是在工作状态. 则告诉Leader再发一遍.
+     */
+    APPEND_ENTRIES_AGAIN,
+
+    /**
+     * Follower 拒绝选举(仅在于Leader宕机并恢复时.)
+     *
+     * 而一旦 Leader 收到了该消息, Leader 立马自动扭转为 Follower.
+     */
+    APPEND_ENTRIES_DENY,
 
     /**
      * 来自其它服务器的响应, 表示接受

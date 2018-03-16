@@ -17,6 +17,7 @@
 package com.qyp.raft.rpc;
 
 import com.qyp.raft.LeaderElection;
+import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.cmd.StandardCommand;
@@ -34,6 +35,13 @@ public class RaftRpcReceive implements RaftRpcReceiveService {
     private LeaderElection leaderElection;
     private ClusterRuntime clusterRuntime;
     private RaftServerRuntime raftServerRuntime;
+
+    public RaftRpcReceive(LeaderElection leaderElection, ClusterRuntime clusterRuntime,
+                          RaftServerRuntime raftServerRuntime) {
+        this.leaderElection = leaderElection;
+        this.clusterRuntime = clusterRuntime;
+        this.raftServerRuntime = raftServerRuntime;
+    }
 
     /**
      * 处理投票请求
@@ -69,16 +77,35 @@ public class RaftRpcReceive implements RaftRpcReceiveService {
     @Override
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
-        if (raftServerRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
-            int term = Integer.valueOf(cmd.getTerm());
+        if (!raftServerRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
+            return RaftCommand.APPEND_ENTRIES;
+        }
+        int term = Integer.valueOf(cmd.getTerm());
+        /**
+         * 对于处于选举中的状态, 对所有的Leader声明请求表示赞许, 并立即转变为Follower
+         */
+        if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
             if (term >= raftServerRuntime.getTerm()) {
                 raftServerRuntime.setTerm(term);
                 raftServerRuntime.setLeader(cmd.getResource());
                 raftServerRuntime.setRole(RaftServerRole.FOLLOWER);
                 raftServerRuntime.setVoteCount(-1);
                 raftServerRuntime.setVoteFor(null);
+
+                clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
+
+                return RaftCommand.APPEND_ENTRIES;
+            } else {
+                return RaftCommand.APPEND_ENTRIES_DENY;
             }
+        } else {
+            // 如果集群依然处于工作中, 可能是
+            // ① 当前的集群宕机, 其中一个机器发起选举, 但是接受的机器还没有超时.
+            // ② 正常情况下的心跳检测.
+            if (raftServerRuntime.getLeader().equalsIgnoreCase(cmd.getResource())) {
+                return RaftCommand.APPEND_ENTRIES;
+            }
+            return RaftCommand.APPEND_ENTRIES_AGAIN;
         }
-        return RaftCommand.APPEND_ENTRIES;
     }
 }

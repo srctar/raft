@@ -40,4 +40,12 @@ public class ClusterRuntime {
     public void setClusterMachine(String[] clusterMachine) {
         this.clusterMachine = clusterMachine;
     }
+
+    public ClusterRole getClusterRole() {
+        return clusterRole;
+    }
+
+    public void setClusterRole(ClusterRole clusterRole) {
+        this.clusterRole = clusterRole;
+    }
 }
