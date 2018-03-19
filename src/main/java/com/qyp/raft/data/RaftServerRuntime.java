@@ -49,7 +49,7 @@ public class RaftServerRuntime {
     /**
      * 当前节点的角色
      */
-    private RaftServerRole role;
+    private volatile RaftServerRole role;
 
     private String self;
 

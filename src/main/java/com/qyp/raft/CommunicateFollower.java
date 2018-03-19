@@ -18,6 +18,7 @@ package com.qyp.raft;
 
 import java.io.IOException;
 
+import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftServerRuntime;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
@@ -48,8 +49,12 @@ public class CommunicateFollower {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
             if (!clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())) {
                 try {
-                    raftRpcLaunchService
+                    RaftCommand cmd = raftRpcLaunchService
                             .notifyFollower(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
+                    // 收到仆从机器的心跳反应有: APPEND_ENTRIES、APPEND_ENTRIES_DENY、APPEND_ENTRIES_AGAIN
+                    if (cmd == RaftCommand.APPEND_ENTRIES_DENY) {
+                        break f;
+                    }
                 } catch (IOException e) {
                 }
             }
