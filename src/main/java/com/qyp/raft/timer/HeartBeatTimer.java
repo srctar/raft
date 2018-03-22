@@ -19,7 +19,7 @@ package com.qyp.raft.timer;
 import com.qyp.raft.LeaderElection;
 import com.qyp.raft.Singleton;
 import com.qyp.raft.data.RaftServerRole;
-import com.qyp.raft.data.RaftServerRuntime;
+import com.qyp.raft.data.RaftNodeRuntime;
 
 /**
  * 心跳超时器. 非 Leader 使用. 对象须单例
@@ -35,7 +35,7 @@ import com.qyp.raft.data.RaftServerRuntime;
 @Singleton
 public class HeartBeatTimer implements Runnable {
 
-    private RaftServerRuntime raftServerRuntime;
+    private RaftNodeRuntime raftNodeRuntime;
     private LeaderElection leaderElection;
 
     private volatile Thread electionThread;
@@ -51,10 +51,10 @@ public class HeartBeatTimer implements Runnable {
      */
     @Override
     public void run() {
-        if (raftServerRuntime.getRole() == RaftServerRole.LEADER)
+        if (raftNodeRuntime.getRole() == RaftServerRole.LEADER)
             return;
-        while (raftServerRuntime.getRole() == RaftServerRole.FOLLOWER
-                || raftServerRuntime.getRole() == RaftServerRole.CANDIDATE) {
+        while (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
+                || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE) {
             synchronized(this) {
                 try {
                     long begin = System.currentTimeMillis();

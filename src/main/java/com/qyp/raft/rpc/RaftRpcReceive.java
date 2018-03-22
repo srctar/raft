@@ -1,111 +1,170 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  The ASF licenses
- * this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * 链家集团, 版权所有
+ * ©2010-2017 Lianjia, Inc. All rights reserved.
+ * 
+ * http://www.lianjia.com 
+ *
  */
 
 package com.qyp.raft.rpc;
 
-import com.qyp.raft.LeaderElection;
-import com.qyp.raft.data.ClusterRole;
-import com.qyp.raft.data.RaftServerRole;
-import com.qyp.raft.cmd.RaftCommand;
-import com.qyp.raft.cmd.StandardCommand;
-import com.qyp.raft.data.ClusterRuntime;
-import com.qyp.raft.data.RaftServerRuntime;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.util.Iterator;
+import java.util.Random;
+
+import com.qyp.raft.RaftClient;
+import com.qyp.raft.RaftServer;
+import com.qyp.raft.Singleton;
+import com.qyp.raft.hook.DestroyAdaptor;
+import com.qyp.raft.hook.Destroyable;
 
 /**
- * 出来来自其它服务器的RPC请求
+ * 对于来自于集群其它节点的请求的访问
+ * <p>
+ * 远程访问的发起有如下Case:
+ * ① 发起投票申请
+ * ② 发起心跳
+ * ③ Follower 向 Leader 发起日志同步请求     TODO
+ * ④ Leader 向 Follower 同步日志请求请求     TODO
+ * <p>
+ * 有请求就需要有响应
+ *
+ * 当前代码不具备守护功能
  *
  * @author yupeng.qin
- * @since 2018-03-13
+ * @since 2018-03-21
  */
+@Singleton
 public class RaftRpcReceive implements RaftRpcReceiveService {
 
-    private LeaderElection leaderElection;
-    private ClusterRuntime clusterRuntime;
-    private RaftServerRuntime raftServerRuntime;
+    // 超时时间，单位毫秒
+    // 心跳最低力度100ms, 因此 Accept 超时设置为 200 ms
+    private static final int TIME_OUT = 200;
+    private final TCPMessageHandler HANDLER;
 
-    public RaftRpcReceive(LeaderElection leaderElection, ClusterRuntime clusterRuntime,
-                          RaftServerRuntime raftServerRuntime) {
-        this.leaderElection = leaderElection;
-        this.clusterRuntime = clusterRuntime;
-        this.raftServerRuntime = raftServerRuntime;
+    private int configPort;
+    // 本地监听端口
+    private static int listenPort = -1;
+    private static boolean canAlive = true;
+    private static final int minPort = 11111;
+    private static final int maxPort = 55555;
+
+    private static volatile boolean inService = false;
+
+    private Selector selector;
+    private ServerSocketChannel listenerChannel;
+
+    public RaftRpcReceive(RaftClient raftClient, RaftServer raftServer) {
+        HANDLER = new TCPMessageHandler(raftClient, raftServer);
+        DestroyAdaptor.getInstance().add(new Destroyable() {
+            @Override
+            public void destroy() {
+                canAlive = false;
+            }
+        });
+    }
+
+    public synchronized void getStart() {
+        if (!inService) {
+            start();
+            inService = true;
+        }
+    }
+
+    public void setConfigPort(int port) {
+        if (port <= 0 || port > 65535) {
+            throw new IllegalArgumentException("Port is in 1~65535!");
+        }
+        this.configPort = port;
+    }
+
+    public int getPort() {
+        if (!inService) {
+            getStart();
+        }
+        return listenPort;
+    }
+
+    private void start() {
+        try {
+            init();
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                bind();
+            }
+        }, "Raft-TCP-Server").start();
     }
 
     /**
-     * 处理投票请求
-     * @param cmd  来自同级服务器的投票请求
-     */
-    @Override
-    public RaftCommand dealWithVote(StandardCommand cmd) {
-        if (raftServerRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
-            int idx = -1;
-            f:
-            for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
-                String clusterMachine = clusterRuntime.getClusterMachine()[i];
-                if (clusterMachine.equalsIgnoreCase(cmd.getResource())) {
-                    idx = i;
-                    break f;
-                }
-            }
-            if (idx > 0) {
-                return leaderElection.dealWithVote(cmd.getResource());
-            }
-        }
-        return RaftCommand.DENY;
-    }
-
-    /**
-     * 处理心跳请求,  一般情况而言, 有心跳, 则一定是来自Leader的心跳.
-     * 心跳的作用, 也是为了保持集群健康度使用.
+     * 创建好的一个 Selector. 绑定指定端口.
      *
-     * 心跳是经过了Leader端检测了的, 同时, Follower 可以告诉 Leader
-     *
-     * @param cmd   Leader的心跳
+     * @throws IOException
      */
-    @Override
-    public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
-
-        if (!raftServerRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
-            return RaftCommand.APPEND_ENTRIES;
-        }
-        int term = Integer.valueOf(cmd.getTerm());
-        /**
-         * 对于处于选举中的状态, 对所有的Leader声明请求表示赞许, 并立即转变为Follower
-         */
-        if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
-            if (term >= raftServerRuntime.getTerm()) {
-                raftServerRuntime.setTerm(term);
-                raftServerRuntime.setLeader(cmd.getResource());
-                raftServerRuntime.setRole(RaftServerRole.FOLLOWER);
-                raftServerRuntime.setVoteCount(-1);
-                raftServerRuntime.setVoteFor(null);
-
-                clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
-
-                return RaftCommand.APPEND_ENTRIES;
+    private void init() throws IOException {
+        selector = Selector.open();
+        // 打开监听信道 目前只做TCP支持
+        listenerChannel = ServerSocketChannel.open();
+        // 与本地端口绑定
+        do {
+            int port = -1;
+            if (configPort > 0) {
+                port = configPort;
             } else {
-                return RaftCommand.APPEND_ENTRIES_DENY;
+                Random random = new Random();
+                // 在重启的情况下不修改端口号.
+             port = (listenPort == -1 ?
+                        (random.nextInt(maxPort) % (maxPort - minPort + 1) + minPort) : listenPort);
             }
-        } else {
-            // 如果集群依然处于工作中, 可能是
-            // ① 当前的集群宕机, 其中一个机器发起选举, 但是接受的机器还没有超时.
-            // ② 正常情况下的心跳检测.
-            if (raftServerRuntime.getLeader().equalsIgnoreCase(cmd.getResource())) {
-                return RaftCommand.APPEND_ENTRIES;
+            try {
+                listenerChannel.socket().bind(new InetSocketAddress(port));
+                listenPort = port;
+            } catch (IOException e) {
             }
-            return RaftCommand.APPEND_ENTRIES_AGAIN;
+        } while (listenPort == -1);
+        // 设置为非阻塞模式
+        listenerChannel.configureBlocking(false);
+        // 将选择器绑定到监听信道,只有非阻塞信道才可以注册选择器.并在注册过程中指出该信道可以进行Accept操作
+        listenerChannel.register(selector, SelectionKey.OP_ACCEPT);
+    }
+
+    /**
+     * 对于数据的处理依然是同步单线程在处理。 本服务的IO要求并不高
+     */
+    private void bind() {
+        while (canAlive) {
+            // 等待某信道就绪(或超时)
+            try {
+                if (selector.select(TIME_OUT) == 0) {
+                    continue;
+                }
+            } catch (IOException e) {
+            }
+            // 取得迭代器.selectedKeys()中包含了每个准备好某一I/O操作的信道的SelectionKey
+            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+
+            while (iterator.hasNext()) {
+                SelectionKey key = iterator.next();
+                try {
+                    HANDLER.handleKey(key);
+                } catch (IOException e) {
+                }
+
+                iterator.remove();
+            }
+        }
+        try {
+            listenerChannel.close();
+            selector.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

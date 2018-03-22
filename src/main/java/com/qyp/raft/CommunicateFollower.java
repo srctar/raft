@@ -20,7 +20,7 @@ import java.io.IOException;
 
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
-import com.qyp.raft.data.RaftServerRuntime;
+import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -31,14 +31,14 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
  */
 public class CommunicateFollower {
 
-    private RaftServerRuntime raftServerRuntime;
+    private RaftNodeRuntime raftNodeRuntime;
     private ClusterRuntime clusterRuntime;
 
     private RaftRpcLaunchService raftRpcLaunchService;
 
-    public CommunicateFollower(RaftServerRuntime raftServerRuntime, ClusterRuntime clusterRuntime,
+    public CommunicateFollower(RaftNodeRuntime raftNodeRuntime, ClusterRuntime clusterRuntime,
                                RaftRpcLaunchService raftRpcLaunchService) {
-        this.raftServerRuntime = raftServerRuntime;
+        this.raftNodeRuntime = raftNodeRuntime;
         this.clusterRuntime = clusterRuntime;
         this.raftRpcLaunchService = raftRpcLaunchService;
     }
@@ -47,10 +47,10 @@ public class CommunicateFollower {
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
-            if (!clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())) {
+            if (!clusterMachine.equalsIgnoreCase(raftNodeRuntime.getSelf())) {
                 try {
                     RaftCommand cmd = raftRpcLaunchService
-                            .notifyFollower(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
+                            .notifyFollower(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
                     // 收到仆从机器的心跳反应有: APPEND_ENTRIES、APPEND_ENTRIES_DENY、APPEND_ENTRIES_AGAIN
                     if (cmd == RaftCommand.APPEND_ENTRIES_DENY) {
                         break f;

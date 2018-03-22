@@ -7,6 +7,14 @@ import com.qyp.raft.cmd.RaftCommand;
 /**
  * 该接口用于主动向远程服务器发起RPC请求用
  *
+ * 远程接受访问的发起有如下Case:
+ * ① 发起投票申请
+ * ② 发起心跳
+ * ③ Follower 向 Leader 发起日志同步请求     TODO
+ * ④ Leader 向 Follower 同步日志请求请求     TODO
+ *
+ * 有请求就需要有响应
+ *
  * @author yupeng.qin
  * @since 2018-03-13
  */

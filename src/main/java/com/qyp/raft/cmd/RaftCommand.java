@@ -25,6 +25,11 @@ package com.qyp.raft.cmd;
 public enum RaftCommand {
 
     /**
+     * 集群节点之间同步数据用
+     */
+    SYNC,
+
+    /**
      * Leader 请求被选举
      */
     REQUEST_VOTE,

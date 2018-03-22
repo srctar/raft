@@ -1,10 +1,17 @@
 package com.qyp.raft.rpc;
 
-import com.qyp.raft.cmd.RaftCommand;
-import com.qyp.raft.cmd.StandardCommand;
-
 /**
- * 该接口用于接受远程服务器发起RPC请求用
+ * 该接口用于接受远程服务器发起RPC请求用。
+ *
+ * 需要实现一个TCP Server; 如果不实现, 可以沿用目标系统自带的服务, 然后通过这个类的实现类转发, 得到对远端消息的处理结果
+ *
+ * 远程访问的发起有如下Case:
+ * ① 处理投票申请
+ * ② 处理心跳
+ * ③ Follower  处理 Leader 日志同步请求     TODO
+ * ④ Leader 处理 Follower 同步日志请求     TODO
+ *
+ * 有请求就需要有响应
  *
  * @author yupeng.qin
  * @since 2018-03-13
@@ -12,19 +19,9 @@ import com.qyp.raft.cmd.StandardCommand;
 public interface RaftRpcReceiveService {
 
     /**
-     * 处理远程服务器的投票请求
-     * @param cmd  来自同级服务器的投票请求
+     * 获取当前节点运行时使用的端口信息.
+     * @return  端口信息
      */
-    RaftCommand dealWithVote(StandardCommand cmd);
+    int getPort();
 
-    /**
-     * 处理来自Leader的心跳请求. 心跳的作用是让Follower知道, Leader还存活.
-     *
-     * TODO 此处考虑Case:
-     * 当Leader节点与Follower节点之间, 因为网络/Leader高负载原因不通时.
-     * 余下Follower节点自行选择新的Leader。此时旧的Leader需要自动转变为Follower。
-     *
-     * @param cmd   Leader的心跳
-     */
-    RaftCommand dealWithHeartBeat(StandardCommand cmd);
 }

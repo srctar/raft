@@ -22,9 +22,8 @@ import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftServerRole;
-import com.qyp.raft.data.RaftServerRuntime;
+import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
-import com.qyp.raft.timer.LeaderHeartBeatTimer;
 
 /**
  * Leader 选举服务, 提供
@@ -46,18 +45,18 @@ public class LeaderElection {
 
     private static final Object LOCK = new Object();
 
-    private RaftServerRuntime raftServerRuntime;
+    private RaftNodeRuntime raftNodeRuntime;
     private ClusterRuntime clusterRuntime;
 
     private RaftRpcLaunchService raftRpcLaunchService;
-    private LeaderHeartBeatTimer leaderHeartBeatTimer;
+    private RaftServer raftServer;
 
-    public LeaderElection(RaftServerRuntime raftServerRuntime, ClusterRuntime clusterRuntime,
-                          RaftRpcLaunchService raftRpcLaunchService, LeaderHeartBeatTimer leaderHeartBeatTimer) {
-        this.raftServerRuntime = raftServerRuntime;
+    public LeaderElection(RaftNodeRuntime raftNodeRuntime, ClusterRuntime clusterRuntime,
+                          RaftRpcLaunchService raftRpcLaunchService, RaftServer raftServer) {
+        this.raftNodeRuntime = raftNodeRuntime;
         this.clusterRuntime = clusterRuntime;
         this.raftRpcLaunchService = raftRpcLaunchService;
-        this.leaderHeartBeatTimer = leaderHeartBeatTimer;
+        this.raftServer = raftServer;
     }
 
     /**
@@ -67,12 +66,12 @@ public class LeaderElection {
      * @param node 发起申请投票的机器
      */
     public RaftCommand dealWithVote(String node) {
-        if (raftServerRuntime.getRole() == RaftServerRole.FOLLOWER) {
-            if (raftServerRuntime.getVoteFor() == null) {
+        if (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER) {
+            if (raftNodeRuntime.getVoteFor() == null) {
                 synchronized(LOCK) {
-                    if (raftServerRuntime.getVoteFor() == null
-                            && raftServerRuntime.getRole() == RaftServerRole.FOLLOWER) {
-                        raftServerRuntime.setVoteFor(node);
+                    if (raftNodeRuntime.getVoteFor() == null
+                            && raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER) {
+                        raftNodeRuntime.setVoteFor(node);
                         return RaftCommand.ACCEPT;
                     }
                 }
@@ -86,7 +85,7 @@ public class LeaderElection {
      */
     public void requestVote() {
 
-        if (raftServerRuntime.getRole() != RaftServerRole.FOLLOWER) {
+        if (raftNodeRuntime.getRole() != RaftServerRole.FOLLOWER) {
             return;
         }
 
@@ -95,18 +94,18 @@ public class LeaderElection {
          */
         clusterRuntime.setClusterRole(ClusterRole.ELECTION);
 
-        raftServerRuntime.setRole(RaftServerRole.CANDIDATE);
-        raftServerRuntime.setVoteFor(raftServerRuntime.getSelf());
-        raftServerRuntime.setVoteCount(1);
-        raftServerRuntime.setTerm(raftServerRuntime.getTerm() + 1);
+        raftNodeRuntime.setRole(RaftServerRole.CANDIDATE);
+        raftNodeRuntime.setVoteFor(raftNodeRuntime.getSelf());
+        raftNodeRuntime.setVoteCount(1);
+        raftNodeRuntime.setTerm(raftNodeRuntime.getTerm() + 1);
 
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
-            if (raftServerRuntime.getRole() != RaftServerRole.CANDIDATE) {
+            if (raftNodeRuntime.getRole() != RaftServerRole.CANDIDATE) {
                 break f;
             }
-            if (clusterMachine.equalsIgnoreCase(raftServerRuntime.getSelf())) {
+            if (clusterMachine.equalsIgnoreCase(raftNodeRuntime.getSelf())) {
                 continue f;
             }
                 /*
@@ -114,16 +113,16 @@ public class LeaderElection {
                  */
             try {
                 RaftCommand cmd = raftRpcLaunchService
-                        .requestVote(raftServerRuntime.getSelf(), clusterMachine, raftServerRuntime.getTerm());
+                        .requestVote(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
                 if (cmd == RaftCommand.ACCEPT) {
-                    raftServerRuntime.increaseVoteCount();
+                    raftNodeRuntime.increaseVoteCount();
                     // 得到多数派的赞成 => 成为 Leader
                     // 同时周知 Leader 的状态信息
-                    if (raftServerRuntime.getVoteCount() > clusterRuntime.getClusterMachine().length / 2) {
-                        raftServerRuntime.setRole(RaftServerRole.LEADER);
-                        raftServerRuntime.setLeader(raftServerRuntime.getSelf());
+                    if (raftNodeRuntime.getVoteCount() > clusterRuntime.getClusterMachine().length / 2) {
+                        raftNodeRuntime.setRole(RaftServerRole.LEADER);
+                        raftNodeRuntime.setLeader(raftNodeRuntime.getSelf());
 
-                        leaderHeartBeatTimer.setRun(true);
+                        raftServer.setRun(true);
                         break f;
                     }
                 }

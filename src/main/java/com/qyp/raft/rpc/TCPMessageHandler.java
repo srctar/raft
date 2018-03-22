@@ -1,0 +1,103 @@
+/*
+ * 链家集团, 版权所有
+ * ©2010-2017 Lianjia, Inc. All rights reserved.
+ * 
+ * http://www.lianjia.com 
+ *
+ */
+
+package com.qyp.raft.rpc;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+
+import com.qyp.raft.RaftClient;
+import com.qyp.raft.RaftServer;
+import com.qyp.raft.cmd.RaftCommand;
+import com.qyp.raft.cmd.StandardCommand;
+
+/**
+ * 用于把信息做区分, 交给TCP处理器或者是HTTP处理器去处理.
+ *
+ * @author yupeng.qin
+ * @since 2017-12-06
+ */
+class TCPMessageHandler {
+
+    // 缓冲区大小 1MB,
+    private static final int TCP_BUFFER_SIZE = 1 << 20;
+
+    private RaftClient raftClient;
+    private RaftServer raftServer;
+
+    public TCPMessageHandler(RaftClient raftClient, RaftServer raftServer) {
+        this.raftClient = raftClient;
+        this.raftServer = raftServer;
+    }
+
+    public void handleKey(SelectionKey key) throws IOException {
+
+        if (key.isAcceptable()) {
+            SocketChannel clientChannel = ((ServerSocketChannel) key.channel()).accept();
+            clientChannel.configureBlocking(false);
+            clientChannel.register(key.selector(),
+                    SelectionKey.OP_READ, ByteBuffer.allocate(TCP_BUFFER_SIZE));
+        }
+
+        String answer = "";
+        if (key.isReadable()) {
+            SocketChannel client = (SocketChannel) key.channel();
+            ByteBuffer buffer = (ByteBuffer) key.attachment();
+            buffer.clear();
+
+            // 读取信息获得读取的字节数
+            long bytesRead = client.read(buffer);
+
+            if (bytesRead == -1) {
+                // 没有读取到内容的情况
+                client.close();
+            } else {
+                // 将缓冲区准备为数据传出状态
+                buffer.flip();
+                StandardCommand query = null;
+                try {
+                    query = StandardCommand.toCommand(buffer.array());
+                    answer = handleEachQuery(query);
+                } catch (ClassNotFoundException e) {
+                    answer = RaftCommand.DENY.name();
+                }
+                key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+
+                buffer = ByteBuffer.wrap(answer.getBytes("UTF-8"));
+                client.write(buffer);
+                client.finishConnect();
+                client.close();
+            }
+        }
+    }
+
+    /**
+     * 被处理的请求, 需要处理 集群投票、心跳以及集群交互的相关情况
+     * @param query
+     * @return
+     * @throws IOException
+     */
+    private String handleEachQuery(StandardCommand query) throws IOException {
+        RaftCommand cmd = RaftCommand.valueOf(query.getCommand());
+        switch (cmd) {
+            // TODO SYNC
+            // SYNC 请求可能是 Leader 同步集群数据
+            // 也可能是 Follower 将消息 递交给服务端
+            case SYNC:
+            {
+            } break;
+            case REQUEST_VOTE: return raftClient.dealWithVote(query).name();
+            case APPEND_ENTRIES: return raftClient.dealWithHeartBeat(query).name();
+            default:break;
+        }
+        return "";
+    }
+}

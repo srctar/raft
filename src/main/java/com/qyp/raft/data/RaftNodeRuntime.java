@@ -22,7 +22,7 @@ package com.qyp.raft.data;
  * @author yupeng.qin
  * @since 2018-03-13
  */
-public class RaftServerRuntime {
+public class RaftNodeRuntime {
 
     /**
      * 在集群选举的时候用, 只有在 voteCount > 集群节点数 的时候, 节点角色才会有改变.
