@@ -17,6 +17,7 @@
 package com.qyp.raft;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRole;
@@ -82,10 +83,17 @@ public class LeaderElection {
 
     /**
      * 由 Follower 向 Candidate 的转变, 先给自己投票, 再请求其它机器给自己投票.
+     * 一台机器直接
      */
     public void requestVote() {
 
         if (raftNodeRuntime.getRole() != RaftServerRole.FOLLOWER) {
+            return;
+        }
+
+        // 集群中如果只有一台机器, 直接选举为Leader。
+        if (clusterRuntime.getClusterMachine().length == 1) {
+            becomeLeader();
             return;
         }
 
@@ -119,16 +127,25 @@ public class LeaderElection {
                     // 得到多数派的赞成 => 成为 Leader
                     // 同时周知 Leader 的状态信息
                     if (raftNodeRuntime.getVoteCount() > clusterRuntime.getClusterMachine().length / 2) {
-                        raftNodeRuntime.setRole(RaftServerRole.LEADER);
-                        raftNodeRuntime.setLeader(raftNodeRuntime.getSelf());
-
-                        raftServer.setRun(true);
+                        becomeLeader();
                         break f;
                     }
                 }
             } catch (IOException e) {
             }
         }
+    }
+
+    // 成为 Leader 之后, 就不再持续被心跳扫描了. 但是对心跳的处理依然继续.
+    public void becomeLeader() {
+        raftNodeRuntime.setRole(RaftServerRole.LEADER);
+        raftNodeRuntime.setLeader(raftNodeRuntime.getSelf());
+
+        clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
+        raftServer.setRun(true);
+
+        System.out.println(raftNodeRuntime.getSelf() +
+                "\t 成为了新一届的 Leader, 成员组成有:" + Arrays.toString(clusterRuntime.getClusterMachine()));
     }
 
 }

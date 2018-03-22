@@ -28,6 +28,25 @@
                     <fork>true</fork>
                 </configuration>
             </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>com.qyp.raft.App</mainClass>
+                        </manifest>
+                        <manifestEntries>
+                            <Premain-Class>com.qyp.raft.App</Premain-Class>
+                            <Agent-Class>com.qyp.raft.App</Agent-Class>
+                            <Can-Redefine-Classes>true</Can-Redefine-Classes>
+                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+                <version>2.4</version>
+            </plugin>
         </plugins>
     </build>
 </project>

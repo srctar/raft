@@ -16,8 +16,12 @@
 
 package com.qyp.raft;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.rpc.RaftRpcLaunch;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 import com.qyp.raft.rpc.RaftRpcReceive;
@@ -51,15 +55,21 @@ public class Launcher {
         this.launchService = launchService;
     }
 
-    public Launcher() {
+    public Launcher(String ip, int port, Set<String> cluster) {
 
-        int port = 10086;
+        String contract = ip + ":" + port;
+        if (cluster == null) {
+            cluster = new HashSet<>();
+        }
+        if (!cluster.contains(contract)) {
+            cluster.add(contract);
+        }
 
         clusterRuntime = new ClusterRuntime();
-
-        clusterRuntime.setClusterMachine(new String[]{"127.0.0.1:" + port});
-
+        clusterRuntime.setClusterMachine(cluster.toArray(new String[]{}));
         raftNodeRuntime = new RaftNodeRuntime();
+        raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
+        raftNodeRuntime.setSelf(contract);
         launchService = new RaftRpcLaunch();
 
         communicateFollower = new CommunicateFollower(raftNodeRuntime, clusterRuntime, launchService);

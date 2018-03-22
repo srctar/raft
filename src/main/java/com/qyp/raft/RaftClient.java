@@ -88,6 +88,7 @@ public class RaftClient {
         int term = Integer.valueOf(cmd.getTerm());
         /**
          * 对于处于选举中的状态, 对所有的Leader声明请求表示赞许, 并立即转变为Follower
+         * 老 Leader 在收到新 Leader 的心跳的时候, 也会自动转化为 Follower
          */
         if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
             if (term >= raftNodeRuntime.getTerm()) {
@@ -118,6 +119,10 @@ public class RaftClient {
                     heartBeatTimer.notify();
                 }
                 return RaftCommand.APPEND_ENTRIES;
+            }
+            // 如果是自身是 老Leader
+            if (raftNodeRuntime.getRole() == RaftServerRole.LEADER) {
+                // TODO 成为 Follower
             }
             return RaftCommand.APPEND_ENTRIES_AGAIN;
         }

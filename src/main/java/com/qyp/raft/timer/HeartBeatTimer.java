@@ -45,6 +45,8 @@ public class HeartBeatTimer implements Runnable {
     public HeartBeatTimer(RaftNodeRuntime raftNodeRuntime, LeaderElection leaderElection) {
         this.raftNodeRuntime = raftNodeRuntime;
         this.leaderElection = leaderElection;
+
+        electionThread = new Thread(new ElectionTimer(leaderElection));
     }
 
     /**
@@ -65,6 +67,7 @@ public class HeartBeatTimer implements Runnable {
             synchronized(this) {
                 try {
                     long begin = System.currentTimeMillis();
+
                     wait(TIME_OUT);
                     // 心跳时间很短, 一个TimeOut会有很多次心跳
                     if (System.currentTimeMillis() - begin > TIME_OUT) {

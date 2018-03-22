@@ -16,6 +16,9 @@
 
 package com.qyp.raft;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Main
  */
@@ -23,7 +26,11 @@ public class App {
 
     public static void main(String[] args) {
 
-        new Launcher();
+        Set<String> set = new HashSet<>();
+        for (int i = 2; i < args.length; i ++) {
+            set.add(args[i].trim());
+        }
+        new Launcher(args[0], Integer.valueOf(args[1]), set);
 
     }
 
