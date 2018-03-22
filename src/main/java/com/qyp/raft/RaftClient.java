@@ -22,6 +22,7 @@ import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.cmd.StandardCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.timer.HeartBeatTimer;
 
 /**
  * 客户端的 Raft 服务
@@ -33,13 +34,20 @@ public class RaftClient {
 
     private LeaderElection leaderElection;
     private ClusterRuntime clusterRuntime;
+    private HeartBeatTimer heartBeatTimer;
     private RaftNodeRuntime raftNodeRuntime;
 
+    private static volatile Thread heartBeatThread = null;
+
     public RaftClient(LeaderElection leaderElection, ClusterRuntime clusterRuntime,
-                      RaftNodeRuntime raftNodeRuntime) {
+                      RaftNodeRuntime raftNodeRuntime, HeartBeatTimer heartBeatTimer) {
         this.leaderElection = leaderElection;
         this.clusterRuntime = clusterRuntime;
+        this.heartBeatTimer = heartBeatTimer;
         this.raftNodeRuntime = raftNodeRuntime;
+
+        heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
+        heartBeatThread.start();
     }
 
     /**
@@ -91,6 +99,12 @@ public class RaftClient {
 
                 clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
 
+                if (heartBeatThread != null && heartBeatThread.isAlive()) {
+                    heartBeatThread.interrupt();
+                    heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
+                    heartBeatThread.start();
+                }
+
                 return RaftCommand.APPEND_ENTRIES;
             } else {
                 return RaftCommand.APPEND_ENTRIES_DENY;
@@ -100,6 +114,9 @@ public class RaftClient {
             // ① 当前的集群宕机, 其中一个机器发起选举, 但是接受的机器还没有超时.
             // ② 正常情况下的心跳检测.
             if (raftNodeRuntime.getLeader().equalsIgnoreCase(cmd.getResource())) {
+                synchronized(heartBeatTimer) {
+                    heartBeatTimer.notify();
+                }
                 return RaftCommand.APPEND_ENTRIES;
             }
             return RaftCommand.APPEND_ENTRIES_AGAIN;

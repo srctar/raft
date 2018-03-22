@@ -22,6 +22,7 @@ import com.qyp.raft.rpc.RaftRpcLaunch;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 import com.qyp.raft.rpc.RaftRpcReceive;
 import com.qyp.raft.rpc.RaftRpcReceiveService;
+import com.qyp.raft.timer.HeartBeatTimer;
 
 /**
  * Raft 的启动器.
@@ -43,6 +44,8 @@ public class Launcher {
     private ClusterRuntime clusterRuntime;
     private RaftNodeRuntime raftNodeRuntime;
 
+    private HeartBeatTimer heartBeatTimer;
+
     public Launcher(RaftRpcReceiveService receiveService, RaftRpcLaunchService launchService) {
         this.receiveService = receiveService;
         this.launchService = launchService;
@@ -50,7 +53,12 @@ public class Launcher {
 
     public Launcher() {
 
+        int port = 10086;
+
         clusterRuntime = new ClusterRuntime();
+
+        clusterRuntime.setClusterMachine(new String[]{"127.0.0.1:" + port});
+
         raftNodeRuntime = new RaftNodeRuntime();
         launchService = new RaftRpcLaunch();
 
@@ -59,9 +67,11 @@ public class Launcher {
         raftServer = new RaftServer(communicateFollower);
         leaderElection = new LeaderElection(raftNodeRuntime, clusterRuntime, launchService, raftServer);
 
-        raftClient = new RaftClient(leaderElection, clusterRuntime, raftNodeRuntime);
+        heartBeatTimer = new HeartBeatTimer(raftNodeRuntime, leaderElection);
+        raftClient = new RaftClient(leaderElection, clusterRuntime, raftNodeRuntime, heartBeatTimer);
 
         receiveService = new RaftRpcReceive(raftClient, raftServer);
+        receiveService.setConfigPort(port);
 
     }
 }

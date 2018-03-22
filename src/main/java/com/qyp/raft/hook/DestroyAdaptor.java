@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.qyp.config.file.RemoteCommunicationAdaptor;
 
 /**
  * 用于集中管理系统里面的待销毁对象。
@@ -36,7 +35,6 @@ public class DestroyAdaptor {
                         it.remove();
                     }
                 }
-                RemoteCommunicationAdaptor.getInstance().haltSelf();
             }
         }));
     }

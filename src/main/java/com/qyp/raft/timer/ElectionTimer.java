@@ -16,7 +16,6 @@
 
 package com.qyp.raft.timer;
 
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import com.qyp.raft.LeaderElection;

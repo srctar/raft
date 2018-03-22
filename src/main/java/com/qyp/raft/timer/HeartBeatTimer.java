@@ -35,10 +35,17 @@ import com.qyp.raft.data.RaftNodeRuntime;
 @Singleton
 public class HeartBeatTimer implements Runnable {
 
+    public final String THREAD_NAME = "Raft-Client-HeartBeat";
+
     private RaftNodeRuntime raftNodeRuntime;
     private LeaderElection leaderElection;
 
     private volatile Thread electionThread;
+
+    public HeartBeatTimer(RaftNodeRuntime raftNodeRuntime, LeaderElection leaderElection) {
+        this.raftNodeRuntime = raftNodeRuntime;
+        this.leaderElection = leaderElection;
+    }
 
     /**
      * 接受心跳超时设置
@@ -61,6 +68,7 @@ public class HeartBeatTimer implements Runnable {
                     wait(TIME_OUT);
                     // 心跳时间很短, 一个TimeOut会有很多次心跳
                     if (System.currentTimeMillis() - begin > TIME_OUT) {
+                        System.out.println("等待超时, 准备选举.............................................");
                         // 选举的时间较长. 在此期间如果未能选举成功(得不到多数派投票)
                         // 将会重置选举线程.
                         if (electionThread != null) {

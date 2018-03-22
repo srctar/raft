@@ -19,9 +19,10 @@ package com.qyp.raft.rpc;
 public interface RaftRpcReceiveService {
 
     /**
-     * 获取当前节点运行时使用的端口信息.
-     * @return  端口信息
+     *
+     * 注入一个运行时的端口配置
+     *
      */
-    int getPort();
+    void setConfigPort(int port);
 
 }
