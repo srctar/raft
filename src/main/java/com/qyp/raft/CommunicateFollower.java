@@ -56,6 +56,7 @@ public class CommunicateFollower {
                         break f;
                     }
                 } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }

@@ -89,7 +89,7 @@ public class RaftNodeRuntime {
         this.leader = leader;
     }
 
-    public RaftServerRole getRole() {
+    public synchronized RaftServerRole getRole() {
         return role;
     }
 
@@ -103,5 +103,17 @@ public class RaftNodeRuntime {
 
     public void setSelf(String self) {
         this.self = self;
+    }
+
+    @Override
+    public String toString() {
+        return "RaftNodeRuntime{" +
+                "voteCount=" + voteCount +
+                ", voteFor='" + voteFor + '\'' +
+                ", term=" + term +
+                ", leader='" + leader + '\'' +
+                ", role=" + role +
+                ", self='" + self + '\'' +
+                '}';
     }
 }

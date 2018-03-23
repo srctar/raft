@@ -26,7 +26,7 @@ import com.qyp.raft.LeaderElection;
  * @author yupeng.qin
  * @since 2018-03-19
  */
-public class ElectionTimer implements Runnable {
+class ElectionTimer implements Runnable {
 
     private LeaderElection leaderElection;
 

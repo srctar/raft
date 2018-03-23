@@ -38,15 +38,16 @@ public class HeartBeatTimer implements Runnable {
     public final String THREAD_NAME = "Raft-Client-HeartBeat";
 
     private RaftNodeRuntime raftNodeRuntime;
-    private LeaderElection leaderElection;
+    // 由心跳器触发选举器
+    private ElectionTimer electionTimer;
 
     private volatile Thread electionThread;
 
     public HeartBeatTimer(RaftNodeRuntime raftNodeRuntime, LeaderElection leaderElection) {
         this.raftNodeRuntime = raftNodeRuntime;
-        this.leaderElection = leaderElection;
 
-        electionThread = new Thread(new ElectionTimer(leaderElection));
+        electionTimer = new ElectionTimer(leaderElection);
+        electionThread = new Thread(electionTimer);
     }
 
     /**
@@ -64,21 +65,26 @@ public class HeartBeatTimer implements Runnable {
             return;
         while (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
                 || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE) {
+            System.out.println(raftNodeRuntime + "==============="  + raftNodeRuntime.hashCode());
             synchronized(this) {
                 try {
                     long begin = System.currentTimeMillis();
 
                     wait(TIME_OUT);
                     // 心跳时间很短, 一个TimeOut会有很多次心跳
-                    if (System.currentTimeMillis() - begin > TIME_OUT) {
-                        System.out.println("等待超时, 准备选举.............................................");
+                    long wait = System.currentTimeMillis() - begin;
+                    if (wait > TIME_OUT) {
+                        System.out.println("等待超时, 准备选举............................................. " + wait);
                         // 选举的时间较长. 在此期间如果未能选举成功(得不到多数派投票)
                         // 将会重置选举线程.
-                        if (electionThread != null) {
-                            electionThread.interrupt();
-                            electionThread = new Thread(new ElectionTimer(leaderElection));
+                        if (!electionThread.isAlive()) {
+                            electionThread = new Thread(electionTimer);
+
+                            raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
+                            raftNodeRuntime.setVoteCount(0);
+                            raftNodeRuntime.setVoteFor(null);
+                            electionThread.start();
                         }
-                        electionThread.start();
                     }
                 } catch (InterruptedException e) {
                     // 这个线程一般不会被中断.

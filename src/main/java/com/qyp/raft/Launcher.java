@@ -37,7 +37,7 @@ import com.qyp.raft.timer.HeartBeatTimer;
 public class Launcher {
 
     // 入口服务
-    private RaftRpcReceiveService receiveService;
+    private RaftRpcReceive receiveService;
     private RaftRpcLaunchService launchService;
     private CommunicateFollower communicateFollower;
 
@@ -45,12 +45,12 @@ public class Launcher {
     private RaftClient raftClient;
 
     private LeaderElection leaderElection;
-    private ClusterRuntime clusterRuntime;
-    private RaftNodeRuntime raftNodeRuntime;
+    private volatile ClusterRuntime clusterRuntime;
+    private volatile RaftNodeRuntime raftNodeRuntime;
 
     private HeartBeatTimer heartBeatTimer;
 
-    public Launcher(RaftRpcReceiveService receiveService, RaftRpcLaunchService launchService) {
+    public Launcher(RaftRpcReceive receiveService, RaftRpcLaunchService launchService) {
         this.receiveService = receiveService;
         this.launchService = launchService;
     }
@@ -82,6 +82,7 @@ public class Launcher {
 
         receiveService = new RaftRpcReceive(raftClient, raftServer);
         receiveService.setConfigPort(port);
+        receiveService.getStart();
 
     }
 }

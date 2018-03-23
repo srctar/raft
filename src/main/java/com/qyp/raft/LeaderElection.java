@@ -22,8 +22,8 @@ import java.util.Arrays;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
-import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -75,8 +75,14 @@ public class LeaderElection {
                         raftNodeRuntime.setVoteFor(node);
                         return RaftCommand.ACCEPT;
                     }
+                    System.out.println(raftNodeRuntime.getSelf() +
+                            "拒绝了" + node + "的申请票, 因为当前角色投票给了:" + raftNodeRuntime.getRole()
+                            + "或者当前角色是:" + raftNodeRuntime.getRole());
                 }
             }
+        } else {
+            System.out.println(raftNodeRuntime.getSelf() +
+                    "拒绝了" + node + "的申请票, 因为当前角色正在参选");
         }
         return RaftCommand.DENY;
     }
@@ -97,6 +103,9 @@ public class LeaderElection {
             return;
         }
 
+        System.out.println(raftNodeRuntime.getSelf() +
+                "\t 申请 Leader 选举, 成员组成有:" + Arrays.toString(clusterRuntime.getClusterMachine()));
+
         /**
          * 集群状态变更为选举中
          */
@@ -116,13 +125,17 @@ public class LeaderElection {
             if (clusterMachine.equalsIgnoreCase(raftNodeRuntime.getSelf())) {
                 continue f;
             }
-                /*
-                给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
-                 */
+            /*
+              给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
+            */
+            System.out.println(raftNodeRuntime.getSelf() +
+                    "\t 申请 Leader 选举, 申请 " + clusterMachine + "的票");
             try {
                 RaftCommand cmd = raftRpcLaunchService
                         .requestVote(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
                 if (cmd == RaftCommand.ACCEPT) {
+                    System.out.println(raftNodeRuntime.getSelf() +
+                            "\t 申请 Leader 选举, " + clusterMachine + "投递赞成票");
                     raftNodeRuntime.increaseVoteCount();
                     // 得到多数派的赞成 => 成为 Leader
                     // 同时周知 Leader 的状态信息
@@ -130,8 +143,12 @@ public class LeaderElection {
                         becomeLeader();
                         break f;
                     }
+                } else {
+                    System.out.println(raftNodeRuntime.getSelf() +
+                            "\t 申请 Leader 选举, " + clusterMachine + "表态为: " + cmd);
                 }
             } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -145,7 +162,8 @@ public class LeaderElection {
         raftServer.setRun(true);
 
         System.out.println(raftNodeRuntime.getSelf() +
-                "\t 成为了新一届的 Leader, 成员组成有:" + Arrays.toString(clusterRuntime.getClusterMachine()));
+                " 成为了新一届的 Leader, " + raftNodeRuntime.hashCode()
+                +"自身内容:" + raftNodeRuntime);
     }
 
 }

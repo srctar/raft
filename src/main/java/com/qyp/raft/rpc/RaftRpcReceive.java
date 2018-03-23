@@ -47,7 +47,7 @@ import com.qyp.raft.hook.Destroyable;
  * @since 2018-03-21
  */
 @Singleton
-public class RaftRpcReceive implements RaftRpcReceiveService {
+public class RaftRpcReceive {
 
     // 超时时间，单位毫秒
     // 心跳最低力度100ms, 因此 Accept 超时设置为 200 ms
