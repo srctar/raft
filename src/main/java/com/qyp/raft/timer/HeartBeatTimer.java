@@ -70,7 +70,6 @@ public class HeartBeatTimer implements Runnable {
             return;
         }
         while (runCase()) {
-            logger.info("当前节点:{} 节点心跳反射, 节点信息:{}", raftNodeRuntime.getSelf(), raftNodeRuntime);
             synchronized(this) {
                 try {
                     long begin = System.currentTimeMillis();
@@ -93,8 +92,7 @@ public class HeartBeatTimer implements Runnable {
                         }
                     }
                 } catch (InterruptedException e) {
-                    // 这个线程一般不会被中断.
-                    e.printStackTrace();
+                    // 中断无碍大局.
                 }
             }
         }

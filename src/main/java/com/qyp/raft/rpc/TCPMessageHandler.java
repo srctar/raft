@@ -104,6 +104,7 @@ class TCPMessageHandler {
             } break;
             case REQUEST_VOTE: return raftClient.dealWithVote(query).name();
             case APPEND_ENTRIES: return raftClient.dealWithHeartBeat(query).name();
+            case INFORMATION: return String.valueOf(raftClient.raftNodeRuntime());
             default:break;
         }
         return "";

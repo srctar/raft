@@ -71,7 +71,8 @@ public class CommunicateFollower {
                         break f;
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    // 对于windows而言, 一般都是 Connection refused: connect
+                    // 对于mac而言, 一般都是 Operation timed out
                 }
             }
         }

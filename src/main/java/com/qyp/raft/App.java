@@ -16,6 +16,12 @@
 
 package com.qyp.raft;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,12 +30,17 @@ import java.util.Set;
  */
 public class App {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
+        File f = new File(args[2]);
         Set<String> set = new HashSet<>();
-        for (int i = 2; i < args.length; i ++) {
-            set.add(args[i].trim());
-        }
+
+        BufferedReader br =
+                new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+        String s;
+        while ((s = br.readLine()) != null)
+            set.add(s);
+
         new Launcher(args[0], Integer.valueOf(args[1]), set);
 
     }

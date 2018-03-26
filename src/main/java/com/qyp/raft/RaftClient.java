@@ -55,6 +55,10 @@ public class RaftClient {
         heartBeatThread.start();
     }
 
+    public RaftNodeRuntime raftNodeRuntime() {
+        return raftNodeRuntime;
+    }
+
     /**
      * 处理投票请求
      * @param cmd  来自同级服务器的投票请求
@@ -112,7 +116,9 @@ public class RaftClient {
 
                 buildCluster(term, cmd.getResource());
 
+                logger.info("当前节点:{}, 既定Follower关系, 准备心跳反射.", raftNodeRuntime.getSelf());
                 if (heartBeatThread != null && heartBeatThread.isAlive()) {
+                    // 会导致当前心跳线程中断. 此时无需做特俗处理.
                     heartBeatThread.interrupt();
                     heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
                     heartBeatThread.start();

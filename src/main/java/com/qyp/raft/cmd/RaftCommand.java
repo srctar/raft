@@ -58,6 +58,11 @@ public enum RaftCommand {
     /**
      * 来自其它服务器的响应, 表示拒绝
      */
-    DENY;
+    DENY,
+
+    /**
+     * 专供外部接口访问, 用于查询当前的集群
+     */
+    INFORMATION
 
 }
