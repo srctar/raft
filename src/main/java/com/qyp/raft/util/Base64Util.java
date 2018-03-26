@@ -27,6 +27,9 @@ import java.util.Base64;
 public class Base64Util {
 
     public static final String encode(byte[] bb) {
+        if (bb == null) {
+            return null;
+        }
         return Base64.getEncoder().encodeToString(bb);
     }
 

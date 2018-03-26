@@ -16,6 +16,9 @@
 
 package com.qyp.raft;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.cmd.RaftCommand;
@@ -31,6 +34,8 @@ import com.qyp.raft.timer.HeartBeatTimer;
  * @since 2018-03-13
  */
 public class RaftClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(RaftClient.class);
 
     private LeaderElection leaderElection;
     private ClusterRuntime clusterRuntime;
@@ -55,6 +60,8 @@ public class RaftClient {
      * @param cmd  来自同级服务器的投票请求
      */
     public RaftCommand dealWithVote(StandardCommand cmd) {
+        logger.info("当前节点:{}. 处理其它节点的申请投票信息, 访问节点:{}, 访问节点的目标节点:{}",
+                raftNodeRuntime.getSelf(), cmd.getResource(), cmd.getTarget());
         if (raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             int idx = -1;
             f:
@@ -82,6 +89,8 @@ public class RaftClient {
      */
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
+        logger.info("当前节点:{}, 收到心跳:{}", raftNodeRuntime.getSelf(), cmd);
+
         if (!raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             return RaftCommand.APPEND_ENTRIES;
         }
@@ -97,6 +106,7 @@ public class RaftClient {
                 raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
                 raftNodeRuntime.setVoteCount(-1);
                 raftNodeRuntime.setVoteFor(null);
+                raftNodeRuntime.setCurrentElectionTime(0);
 
                 clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
 
@@ -115,6 +125,7 @@ public class RaftClient {
             // ① 当前的集群宕机, 其中一个机器发起选举, 但是接受的机器还没有超时.
             // ② 正常情况下的心跳检测.
             if (raftNodeRuntime.getLeader().equalsIgnoreCase(cmd.getResource())) {
+                raftNodeRuntime.setLastHeartTime(System.currentTimeMillis());
                 synchronized(heartBeatTimer) {
                     heartBeatTimer.notify();
                 }

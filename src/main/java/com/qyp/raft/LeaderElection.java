@@ -19,6 +19,9 @@ package com.qyp.raft;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
@@ -43,6 +46,8 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
  */
 @Singleton
 public class LeaderElection {
+
+    private static final Logger logger = LoggerFactory.getLogger(LeaderElection.class);
 
     private static final Object LOCK = new Object();
 
@@ -73,16 +78,16 @@ public class LeaderElection {
                     if (raftNodeRuntime.getVoteFor() == null
                             && raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER) {
                         raftNodeRuntime.setVoteFor(node);
+                        logger.info("当前节点:{} 接受了 {} 的申请票, 等待接受心跳成为 Follower!!!!!!!!!!!!!!!!!!!",
+                                raftNodeRuntime.getSelf(), node, raftNodeRuntime.getRole(), raftNodeRuntime.getRole());
                         return RaftCommand.ACCEPT;
                     }
-                    System.out.println(raftNodeRuntime.getSelf() +
-                            "拒绝了" + node + "的申请票, 因为当前角色投票给了:" + raftNodeRuntime.getRole()
-                            + "或者当前角色是:" + raftNodeRuntime.getRole());
+                    logger.info("当前节点:{} 拒绝了 {} 的申请票, 因为当前角色投票给了:{} 或者当前角色是: {}",
+                            raftNodeRuntime.getSelf(), node, raftNodeRuntime.getRole(), raftNodeRuntime.getRole());
                 }
             }
         } else {
-            System.out.println(raftNodeRuntime.getSelf() +
-                    "拒绝了" + node + "的申请票, 因为当前角色正在参选");
+            logger.info("当前节点:{} 拒绝了{} 的申请票, 因为当前角色正在参选", raftNodeRuntime.getSelf(), node);
         }
         return RaftCommand.DENY;
     }
@@ -93,7 +98,11 @@ public class LeaderElection {
      */
     public void requestVote() {
 
-        if (raftNodeRuntime.getRole() != RaftServerRole.FOLLOWER) {
+        logger.info("当前节点:{}, 角色:{}, 申请 Leader 选举, 成员组成数据:{}, 有:{}",
+                raftNodeRuntime.getSelf(), raftNodeRuntime.getRole(),
+                clusterRuntime.getClusterMachine().length, Arrays.toString(clusterRuntime.getClusterMachine()));
+        if (raftNodeRuntime.getRole() != RaftServerRole.FOLLOWER
+                || (System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime()) < RaftServer.HEART_TIME * 2) {
             return;
         }
 
@@ -103,9 +112,6 @@ public class LeaderElection {
             return;
         }
 
-        System.out.println(raftNodeRuntime.getSelf() +
-                "\t 申请 Leader 选举, 成员组成有:" + Arrays.toString(clusterRuntime.getClusterMachine()));
-
         /**
          * 集群状态变更为选举中
          */
@@ -114,7 +120,11 @@ public class LeaderElection {
         raftNodeRuntime.setRole(RaftServerRole.CANDIDATE);
         raftNodeRuntime.setVoteFor(raftNodeRuntime.getSelf());
         raftNodeRuntime.setVoteCount(1);
-        raftNodeRuntime.setTerm(raftNodeRuntime.getTerm() + 1);
+        // 只在当前第一次选举的时候加一
+        if (raftNodeRuntime.getCurrentElectionTime() == 0) {
+            raftNodeRuntime.setTerm(raftNodeRuntime.getTerm() + 1);
+        }
+        raftNodeRuntime.setCurrentElectionTime(raftNodeRuntime.getCurrentElectionTime() + 1);
 
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
@@ -128,14 +138,12 @@ public class LeaderElection {
             /*
               给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
             */
-            System.out.println(raftNodeRuntime.getSelf() +
-                    "\t 申请 Leader 选举, 申请 " + clusterMachine + "的票");
+            logger.info("当前节点:{} 申请 Leader 选举, 申请 Leader 选举, 申请:{}的票", raftNodeRuntime.getSelf(), clusterMachine);
             try {
                 RaftCommand cmd = raftRpcLaunchService
                         .requestVote(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
                 if (cmd == RaftCommand.ACCEPT) {
-                    System.out.println(raftNodeRuntime.getSelf() +
-                            "\t 申请 Leader 选举, " + clusterMachine + "投递赞成票");
+                    logger.info("当前节点:{} 申请Leader 选举, 申请Leader选举, {}投递赞成票", raftNodeRuntime.getSelf(), clusterMachine);
                     raftNodeRuntime.increaseVoteCount();
                     // 得到多数派的赞成 => 成为 Leader
                     // 同时周知 Leader 的状态信息
@@ -144,12 +152,16 @@ public class LeaderElection {
                         break f;
                     }
                 } else {
-                    System.out.println(raftNodeRuntime.getSelf() +
-                            "\t 申请 Leader 选举, " + clusterMachine + "表态为: " + cmd);
+                    logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, {}表态为: {}",
+                            raftNodeRuntime.getSelf(), clusterMachine, cmd);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+        if (raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE) {
+            raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
+            raftNodeRuntime.setVoteFor(null);
         }
     }
 
@@ -157,13 +169,13 @@ public class LeaderElection {
     public void becomeLeader() {
         raftNodeRuntime.setRole(RaftServerRole.LEADER);
         raftNodeRuntime.setLeader(raftNodeRuntime.getSelf());
+        int time = raftNodeRuntime.getCurrentElectionTime();
+        raftNodeRuntime.setCurrentElectionTime(0);
 
         clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
         raftServer.setRun(true);
 
-        System.out.println(raftNodeRuntime.getSelf() +
-                " 成为了新一届的 Leader, " + raftNodeRuntime.hashCode()
-                +"自身内容:" + raftNodeRuntime);
+        logger.info("当前节点:{} 成为了新一届的Leader, 选举了{}次, 自身内容: {}", raftNodeRuntime.getSelf(), time, raftNodeRuntime);
     }
 
 }

@@ -16,14 +16,17 @@
 
 package com.qyp.raft.timer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.qyp.raft.LeaderElection;
 import com.qyp.raft.Singleton;
-import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.data.RaftServerRole;
 
 /**
  * 心跳超时器. 非 Leader 使用. 对象须单例
- *
+ * <p>
  * 在指定的超时时间内, 接受到了心跳活动, 程序继续执行.
  * 未接收到心跳:
  * 如果当前角色是Follower: 自动扭转为Candidate. 并发起投票.
@@ -34,6 +37,8 @@ import com.qyp.raft.data.RaftNodeRuntime;
  */
 @Singleton
 public class HeartBeatTimer implements Runnable {
+
+    private static final Logger logger = LoggerFactory.getLogger(HeartBeatTimer.class);
 
     public final String THREAD_NAME = "Raft-Client-HeartBeat";
 
@@ -61,11 +66,11 @@ public class HeartBeatTimer implements Runnable {
      */
     @Override
     public void run() {
-        if (raftNodeRuntime.getRole() == RaftServerRole.LEADER)
+        if (raftNodeRuntime.getRole() == RaftServerRole.LEADER) {
             return;
-        while (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
-                || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE) {
-            System.out.println(raftNodeRuntime + "==============="  + raftNodeRuntime.hashCode());
+        }
+        while (runCase()) {
+            logger.info("当前节点:{} 节点心跳反射, 节点信息:{}", raftNodeRuntime.getSelf(), raftNodeRuntime);
             synchronized(this) {
                 try {
                     long begin = System.currentTimeMillis();
@@ -73,16 +78,17 @@ public class HeartBeatTimer implements Runnable {
                     wait(TIME_OUT);
                     // 心跳时间很短, 一个TimeOut会有很多次心跳
                     long wait = System.currentTimeMillis() - begin;
-                    if (wait > TIME_OUT) {
-                        System.out.println("等待超时, 准备选举............................................. " + wait);
+                    if (wait >= TIME_OUT) {
+                        logger.info("当前节点:{} 节点心跳反射, 等待超时........................ 节点信息:{}",
+                                raftNodeRuntime.getSelf(), raftNodeRuntime);
                         // 选举的时间较长. 在此期间如果未能选举成功(得不到多数派投票)
                         // 将会重置选举线程.
-                        if (!electionThread.isAlive()) {
-                            electionThread = new Thread(electionTimer);
+                        if (!electionThread.isAlive() && runCase()) {
 
                             raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
                             raftNodeRuntime.setVoteCount(0);
-                            raftNodeRuntime.setVoteFor(null);
+
+                            electionThread = new Thread(electionTimer);
                             electionThread.start();
                         }
                     }
@@ -92,5 +98,13 @@ public class HeartBeatTimer implements Runnable {
                 }
             }
         }
+    }
+
+    // 节点待投票
+    // 并且投票者只能是自己
+    // 才能参选投票
+    private boolean runCase() {
+        return (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE)
+                && (raftNodeRuntime.getVoteFor() == null || raftNodeRuntime.getVoteFor().equalsIgnoreCase(raftNodeRuntime.getSelf()));
     }
 }

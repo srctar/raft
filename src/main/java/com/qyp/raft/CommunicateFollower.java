@@ -17,6 +17,10 @@
 package com.qyp.raft;
 
 import java.io.IOException;
+import java.util.Arrays;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
@@ -31,6 +35,8 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
  */
 public class CommunicateFollower {
 
+    private static final Logger logger = LoggerFactory.getLogger(CommunicateFollower.class);
+
     private RaftNodeRuntime raftNodeRuntime;
     private ClusterRuntime clusterRuntime;
 
@@ -44,6 +50,8 @@ public class CommunicateFollower {
     }
 
     public void heartBeat() {
+        logger.info("Leader节点:{}, 给Follower节点发心跳, Follower:{}",
+                raftNodeRuntime.getSelf(), Arrays.toString(clusterRuntime.getClusterMachine()));
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
@@ -51,7 +59,12 @@ public class CommunicateFollower {
                 try {
                     RaftCommand cmd = raftRpcLaunchService
                             .notifyFollower(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Leader 节点:{}, 给 Follower节点发心跳, Follower的反应:{}",
+                                raftNodeRuntime.getSelf(), clusterMachine, cmd);
+                    }
                     // 收到仆从机器的心跳反应有: APPEND_ENTRIES、APPEND_ENTRIES_DENY、APPEND_ENTRIES_AGAIN
+                    // 如果心跳被拒绝, 则可能自己是老机器, 需要直接重置主机状态
                     if (cmd == RaftCommand.APPEND_ENTRIES_DENY) {
                         break f;
                     }

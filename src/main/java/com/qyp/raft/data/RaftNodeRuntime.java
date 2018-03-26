@@ -53,6 +53,13 @@ public class RaftNodeRuntime {
 
     private String self;
 
+    private long lastHeartTime;
+
+    /**
+     * 当前当此选举所花时间
+     */
+    private volatile int currentElectionTime;
+
     public int getVoteCount() {
         return voteCount;
     }
@@ -93,7 +100,7 @@ public class RaftNodeRuntime {
         return role;
     }
 
-    public void setRole(RaftServerRole role) {
+    public synchronized void setRole(RaftServerRole role) {
         this.role = role;
     }
 
@@ -105,6 +112,22 @@ public class RaftNodeRuntime {
         this.self = self;
     }
 
+    public long getLastHeartTime() {
+        return lastHeartTime;
+    }
+
+    public void setLastHeartTime(long lastHeartTime) {
+        this.lastHeartTime = lastHeartTime;
+    }
+
+    public int getCurrentElectionTime() {
+        return currentElectionTime;
+    }
+
+    public void setCurrentElectionTime(int currentElectionTime) {
+        this.currentElectionTime = currentElectionTime;
+    }
+
     @Override
     public String toString() {
         return "RaftNodeRuntime{" +
@@ -114,6 +137,8 @@ public class RaftNodeRuntime {
                 ", leader='" + leader + '\'' +
                 ", role=" + role +
                 ", self='" + self + '\'' +
+                ", lastHeartTime=" + lastHeartTime +
+                ", currentElectionTime=" + currentElectionTime +
                 '}';
     }
 }

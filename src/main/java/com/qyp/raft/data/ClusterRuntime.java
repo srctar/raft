@@ -31,7 +31,7 @@ public class ClusterRuntime {
      */
     private String[] clusterMachine;
 
-    private ClusterRole clusterRole;
+    private volatile ClusterRole clusterRole;
 
     public String[] getClusterMachine() {
         return clusterMachine;

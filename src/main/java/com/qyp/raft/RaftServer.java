@@ -31,10 +31,13 @@ import com.qyp.raft.hook.Destroyable;
  */
 public class RaftServer {
 
+    public static final long HEART_TIME = 100L;
+
     // 线程池只需要一个线程.
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     private CommunicateFollower communicateFollower;
+    private HeartBeat heartBeat = new HeartBeat();
     private volatile boolean run = false;
 
     public void setRun(boolean run) {
@@ -43,7 +46,7 @@ public class RaftServer {
 
     public RaftServer(CommunicateFollower communicateFollower) {
         this.communicateFollower = communicateFollower;
-        executorService.schedule(new HeartBeat(), 100L, TimeUnit.MILLISECONDS);
+        executorService.scheduleAtFixedRate(heartBeat, 100L, HEART_TIME, TimeUnit.MILLISECONDS);
 
         DestroyAdaptor.getInstance().add(new Destroyable() {
             @Override
