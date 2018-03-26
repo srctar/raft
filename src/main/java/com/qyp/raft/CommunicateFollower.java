@@ -50,8 +50,10 @@ public class CommunicateFollower {
     }
 
     public void heartBeat() {
-        logger.info("Leader节点:{}, 给Follower节点发心跳, Follower:{}",
-                raftNodeRuntime.getSelf(), Arrays.toString(clusterRuntime.getClusterMachine()));
+        if (logger.isDebugEnabled()) {
+            logger.debug("Leader节点:{}, 给Follower节点发心跳, Follower:{}",
+                    raftNodeRuntime.getSelf(), Arrays.toString(clusterRuntime.getClusterMachine()));
+        }
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];

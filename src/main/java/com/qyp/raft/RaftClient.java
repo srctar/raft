@@ -89,26 +89,28 @@ public class RaftClient {
      */
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
-        logger.info("当前节点:{}, 收到心跳:{}", raftNodeRuntime.getSelf(), cmd);
+        if (logger.isDebugEnabled()) {
+            logger.debug("当前节点:{}, 收到心跳:{}", raftNodeRuntime.getSelf(), cmd);
+        }
 
         if (!raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             return RaftCommand.APPEND_ENTRIES;
         }
         int term = Integer.valueOf(cmd.getTerm());
+
+        // 启动时期, 直接接受现存的服务器通知
+        if (clusterRuntime.getClusterRole() == null) {
+            buildCluster(term, cmd.getResource());
+            clusterRuntime.setClusterRole(ClusterRole.ELECTION);
+        }
         /**
          * 对于处于选举中的状态, 对所有的Leader声明请求表示赞许, 并立即转变为Follower
          * 老 Leader 在收到新 Leader 的心跳的时候, 也会自动转化为 Follower
          */
         if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
             if (term >= raftNodeRuntime.getTerm()) {
-                raftNodeRuntime.setTerm(term);
-                raftNodeRuntime.setLeader(cmd.getResource());
-                raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
-                raftNodeRuntime.setVoteCount(-1);
-                raftNodeRuntime.setVoteFor(null);
-                raftNodeRuntime.setCurrentElectionTime(0);
 
-                clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
+                buildCluster(term, cmd.getResource());
 
                 if (heartBeatThread != null && heartBeatThread.isAlive()) {
                     heartBeatThread.interrupt();
@@ -137,5 +139,16 @@ public class RaftClient {
             }
             return RaftCommand.APPEND_ENTRIES_AGAIN;
         }
+    }
+
+    private void buildCluster(int term, String leader) {
+        raftNodeRuntime.setTerm(term);
+        raftNodeRuntime.setLeader(leader);
+        raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
+        raftNodeRuntime.setVoteCount(-1);
+        raftNodeRuntime.setVoteFor(null);
+        raftNodeRuntime.setCurrentElectionTime(0);
+
+        clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
     }
 }
