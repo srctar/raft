@@ -69,6 +69,8 @@ public class LeaderElection {
      * 处理来自别的机器的投票请求:
      * 只要自己是Follower, 立马对请求机器发起应答, 同意投票.
      *
+     * 对于多次申请投票的, 对于第二次及以后的一律拒绝
+     *
      * @param node 发起申请投票的机器
      */
     public RaftCommand dealWithVote(String node) {
@@ -79,12 +81,11 @@ public class LeaderElection {
                             && raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
                             && clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
                         raftNodeRuntime.setVoteFor(node);
-                        logger.info("当前节点:{} 接受了{} 的申请票, 等待接受心跳成为Follower!!!!!!!!!!!!!!!!!!!",
-                                raftNodeRuntime.getSelf(), node, raftNodeRuntime.getRole(), raftNodeRuntime.getRole());
+                        logger.info("当前节点:{} 接受了{} 的申请票, 等待接受心跳成为Follower!", raftNodeRuntime.getSelf(), node);
                         return RaftCommand.ACCEPT;
                     }
                     logger.info("当前节点:{} 拒绝了{} 的申请票, 因为当前角色投票给了:{} 或者当前角色是: {}",
-                            raftNodeRuntime.getSelf(), node, raftNodeRuntime.getRole(), raftNodeRuntime.getRole());
+                            raftNodeRuntime.getSelf(), node, raftNodeRuntime.getVoteFor(), raftNodeRuntime.getRole());
                 }
             }
         }
@@ -95,7 +96,7 @@ public class LeaderElection {
      * 由 Follower 向 Candidate 的转变, 先给自己投票, 再请求其它机器给自己投票.
      * 一台机器直接
      */
-    public void requestVote() {
+    public synchronized void requestVote() {
 
         logger.info("当前节点:{}, 角色:{}, 申请Leader选举, 成员组成数据:{}, 有:{}",
                 raftNodeRuntime.getSelf(), raftNodeRuntime.getRole(),
@@ -150,6 +151,8 @@ public class LeaderElection {
                         becomeLeader();
                         break f;
                     }
+                } else if (cmd == RaftCommand.DENY) {
+                    // 如果被拒绝, 则累加term. 重新选举
                 } else {
                     logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, {}表态为: {}",
                             raftNodeRuntime.getSelf(), clusterMachine, cmd);

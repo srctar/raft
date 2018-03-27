@@ -61,6 +61,11 @@ public class RaftClient {
      * @param cmd 来自同级服务器的投票请求
      */
     public RaftCommand dealWithVote(StandardCommand cmd) {
+        // 如果系统刚刚起步, 就接受到了别的服务器的投票申请, 则直接接受投票
+        if (clusterRuntime.getClusterRole() == null) {
+            clusterRuntime.setClusterRole(ClusterRole.ELECTION);
+            return RaftCommand.ACCEPT;
+        }
         if (raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             int idx = -1;
             f:
@@ -94,7 +99,7 @@ public class RaftClient {
         }
 
         if (!raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
-            return RaftCommand.APPEND_ENTRIES;
+            return RaftCommand.APPEND_ENTRIES_DENY;
         }
         int term = Integer.valueOf(cmd.getTerm());
 
@@ -133,26 +138,29 @@ public class RaftClient {
             if (raftNodeRuntime.getLeader().equalsIgnoreCase(cmd.getResource())) {
                 raftNodeRuntime.setLastHeartTime(System.currentTimeMillis());
                 raftNodeRuntime.setTerm(term);
+                raftNodeRuntime.setCurrentElectionTime(0);
                 synchronized(heartBeatTimer) {
                     heartBeatTimer.notify();
                 }
                 return RaftCommand.APPEND_ENTRIES;
             }
             // 如果是自身是 老Leader
-            if (raftNodeRuntime.getRole() == RaftServerRole.LEADER) {
-                // TODO 成为 Follower
+            if (raftNodeRuntime.getRole() == RaftServerRole.LEADER && term >= raftNodeRuntime.getTerm()) {
+                buildCluster(term, cmd.getResource());
+                raftNodeRuntime.setCurrentElectionTime(0);
+                return RaftCommand.APPEND_ENTRIES;
             }
             return RaftCommand.APPEND_ENTRIES_AGAIN;
         }
     }
 
+    // 成为 Follower
     private void buildCluster(int term, String leader) {
         raftNodeRuntime.setTerm(term);
         raftNodeRuntime.setLeader(leader);
         raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
         raftNodeRuntime.setVoteCount(-1);
         raftNodeRuntime.setVoteFor(null);
-        raftNodeRuntime.setCurrentElectionTime(0);
 
         clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
     }

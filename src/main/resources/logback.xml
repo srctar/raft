@@ -3,7 +3,7 @@
 
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder charset="UTF-8">
-            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS} %5p %class:%L] [%t] %m%n</pattern>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS} %5p %c:%L] [%t] %m%n</pattern>
         </encoder>
     </appender>
 
