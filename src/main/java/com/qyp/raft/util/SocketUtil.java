@@ -51,10 +51,10 @@ public class SocketUtil {
     }
 
     private static final ByteBuffer notifyOf(String host, byte[] bt) throws IOException {
-        return notifyOf(host, bt, 100L);
+        return notifyOf(host, bt, 100);
     }
 
-    private static final ByteBuffer notifyOf(String host, byte[] bt, long timeOut) throws IOException {
+    private static final ByteBuffer notifyOf(String host, byte[] bt, int timeOut) throws IOException {
 
         String[] h = host.split(":");
 
@@ -62,8 +62,8 @@ public class SocketUtil {
         SocketChannel channel = null;
         try {
             selector = Selector.open();
-            channel =
-                    SocketChannel.open(new InetSocketAddress(h[0], Integer.valueOf(h[1])));
+            channel = SocketChannel.open();
+            channel.socket().connect(new InetSocketAddress(h[0], Integer.valueOf(h[1])), timeOut);
             channel.configureBlocking(false);
             channel.register(selector, SelectionKey.OP_READ);
 

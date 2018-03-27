@@ -39,6 +39,8 @@ public class RaftServer {
     private CommunicateFollower communicateFollower;
     private HeartBeat heartBeat = new HeartBeat();
     private volatile boolean run = false;
+    // 防止子线程尚未进行完毕, 父线程又一次提交
+    private volatile boolean ready = true;
 
     public void setRun(boolean run) {
         this.run = run;
@@ -60,8 +62,10 @@ public class RaftServer {
 
         @Override
         public void run() {
-            if (run) {
+            if (run && ready) {
+                ready = false;
                 communicateFollower.heartBeat();
+                ready = true;
             }
         }
     }

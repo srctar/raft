@@ -112,7 +112,8 @@ public class CommunicateFollower {
                     }
                 } catch (TimeoutException e) {
                     // 超时不能管
-                    e.printStackTrace();
+                    logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, 处理超时.",
+                            raftNodeRuntime.getSelf(), clusterMachine, e);
                 }
             }
         }
