@@ -18,6 +18,7 @@ package com.qyp.raft.util;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -67,7 +68,7 @@ public class SocketUtil {
             channel.register(selector, SelectionKey.OP_READ);
 
             channel.write(ByteBuffer.wrap(bt));
-            // 给自身线程1S的反应时间
+            // 给自身线程超时的反应时间
             if (selector.select(timeOut) > 0) {
                 Iterator<SelectionKey> it = selector.selectedKeys().iterator();
                 while (it.hasNext()) {
@@ -78,11 +79,12 @@ public class SocketUtil {
                         ch.read(ok);
                         ok.flip();
                         ch.close();
-
                         return ok;
                     }
                     it.remove();
                 }
+            } else {
+                throw new SocketTimeoutException("Time " + timeOut);
             }
         } finally {
             if (channel != null) {

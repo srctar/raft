@@ -16,8 +16,14 @@
 
 package com.qyp.raft;
 
-import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.hook.DestroyAdaptor;
+import com.qyp.raft.hook.Destroyable;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -36,6 +44,7 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
 public class CommunicateFollower {
 
     private static final Logger logger = LoggerFactory.getLogger(CommunicateFollower.class);
+    private final ExecutorService executor;
 
     private RaftNodeRuntime raftNodeRuntime;
     private ClusterRuntime clusterRuntime;
@@ -47,6 +56,18 @@ public class CommunicateFollower {
         this.raftNodeRuntime = raftNodeRuntime;
         this.clusterRuntime = clusterRuntime;
         this.raftRpcLaunchService = raftRpcLaunchService;
+
+        int size = clusterRuntime.getClusterMachine().length / 2;
+        size = size > 0 ? size : 1;
+        // 线程池保证有总机器数的一般提供服务.
+        executor = Executors.newFixedThreadPool(size);
+
+        DestroyAdaptor.getInstance().add(new Destroyable() {
+            @Override
+            public void destroy() {
+                executor.shutdownNow();
+            }
+        });
     }
 
     public void heartBeat() {
@@ -58,9 +79,19 @@ public class CommunicateFollower {
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
             if (!clusterMachine.equalsIgnoreCase(raftNodeRuntime.getSelf())) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳", raftNodeRuntime.getSelf(), clusterMachine);
+                }
                 try {
-                    RaftCommand cmd = raftRpcLaunchService
-                            .notifyFollower(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
+                    // 这个必须设置超时时间, 否则会导致其它节点的心跳接受时间超时. 进而重复选举.
+                    Future<RaftCommand> f = executor.submit(new Callable<RaftCommand>() {
+                        @Override
+                        public RaftCommand call() throws Exception {
+                            return raftRpcLaunchService.notifyFollower(
+                                    raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
+                        }
+                    });
+                    RaftCommand cmd = f.get(RaftServer.HEART_TIME, TimeUnit.MILLISECONDS);
                     if (logger.isDebugEnabled()) {
                         logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, Follower的反应:{}",
                                 raftNodeRuntime.getSelf(), clusterMachine, cmd);
@@ -70,9 +101,18 @@ public class CommunicateFollower {
                     if (cmd == RaftCommand.APPEND_ENTRIES_DENY) {
                         break f;
                     }
-                } catch (IOException e) {
+                } catch (InterruptedException e) {
+                    // 线程不会被中断
+                } catch (ExecutionException e) {
                     // 对于windows而言, 一般都是 Connection refused: connect
                     // 对于mac而言, 一般都是 Operation timed out
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, 连接出现异常.",
+                                raftNodeRuntime.getSelf(), clusterMachine, e);
+                    }
+                } catch (TimeoutException e) {
+                    // 超时不能管
+                    e.printStackTrace();
                 }
             }
         }
