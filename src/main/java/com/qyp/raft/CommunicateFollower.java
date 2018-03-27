@@ -51,7 +51,7 @@ public class CommunicateFollower {
 
     public void heartBeat() {
         if (logger.isDebugEnabled()) {
-            logger.debug("Leader节点:{}, 给Follower节点发心跳, Follower:{}",
+            logger.debug("当前节点(Leader):{}, 给Follower节点发心跳, Follower:{}",
                     raftNodeRuntime.getSelf(), Arrays.toString(clusterRuntime.getClusterMachine()));
         }
         f:
@@ -62,7 +62,7 @@ public class CommunicateFollower {
                     RaftCommand cmd = raftRpcLaunchService
                             .notifyFollower(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Leader 节点:{}, 给 Follower节点发心跳, Follower的反应:{}",
+                        logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, Follower的反应:{}",
                                 raftNodeRuntime.getSelf(), clusterMachine, cmd);
                     }
                     // 收到仆从机器的心跳反应有: APPEND_ENTRIES、APPEND_ENTRIES_DENY、APPEND_ENTRIES_AGAIN

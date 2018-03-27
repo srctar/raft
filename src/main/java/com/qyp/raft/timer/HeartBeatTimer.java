@@ -82,7 +82,7 @@ public class HeartBeatTimer implements Runnable {
                                 raftNodeRuntime.getSelf(), raftNodeRuntime);
                         // 选举的时间较长. 在此期间如果未能选举成功(得不到多数派投票)
                         // 将会重置选举线程.
-                        if (!electionThread.isAlive() && runCase()) {
+                        if (!electionThread.isAlive() && runCase() && !Thread.currentThread().isInterrupted()) {
 
                             raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
                             raftNodeRuntime.setVoteCount(0);
@@ -102,7 +102,10 @@ public class HeartBeatTimer implements Runnable {
     // 并且投票者只能是自己
     // 才能参选投票
     private boolean runCase() {
-        return (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE)
-                && (raftNodeRuntime.getVoteFor() == null || raftNodeRuntime.getVoteFor().equalsIgnoreCase(raftNodeRuntime.getSelf()));
+        return (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
+                        || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE)
+                && (raftNodeRuntime.getVoteFor() == null
+                            || raftNodeRuntime.getVoteFor().equalsIgnoreCase(raftNodeRuntime.getSelf())
+                && (System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime()) > TIME_OUT);
     }
 }

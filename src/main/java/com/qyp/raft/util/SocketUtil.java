@@ -50,6 +50,10 @@ public class SocketUtil {
     }
 
     private static final ByteBuffer notifyOf(String host, byte[] bt) throws IOException {
+        return notifyOf(host, bt, 100L);
+    }
+
+    private static final ByteBuffer notifyOf(String host, byte[] bt, long timeOut) throws IOException {
 
         String[] h = host.split(":");
 
@@ -64,7 +68,7 @@ public class SocketUtil {
 
             channel.write(ByteBuffer.wrap(bt));
             // 给自身线程1S的反应时间
-            if (selector.select(1000L) > 0) {
+            if (selector.select(timeOut) > 0) {
                 Iterator<SelectionKey> it = selector.selectedKeys().iterator();
                 while (it.hasNext()) {
                     SelectionKey k = it.next();

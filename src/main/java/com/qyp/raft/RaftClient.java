@@ -19,12 +19,12 @@ package com.qyp.raft;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.qyp.raft.data.ClusterRole;
-import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.cmd.StandardCommand;
+import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.data.RaftServerRole;
 import com.qyp.raft.timer.HeartBeatTimer;
 
 /**
@@ -55,17 +55,12 @@ public class RaftClient {
         heartBeatThread.start();
     }
 
-    public RaftNodeRuntime raftNodeRuntime() {
-        return raftNodeRuntime;
-    }
-
     /**
      * 处理投票请求
-     * @param cmd  来自同级服务器的投票请求
+     *
+     * @param cmd 来自同级服务器的投票请求
      */
     public RaftCommand dealWithVote(StandardCommand cmd) {
-        logger.info("当前节点:{}. 处理其它节点的申请投票信息, 访问节点:{}, 访问节点的目标节点:{}",
-                raftNodeRuntime.getSelf(), cmd.getResource(), cmd.getTarget());
         if (raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             int idx = -1;
             f:
@@ -86,10 +81,10 @@ public class RaftClient {
     /**
      * 处理心跳请求,  一般情况而言, 有心跳, 则一定是来自Leader的心跳.
      * 心跳的作用, 也是为了保持集群健康度使用.
-     *
+     * <p>
      * 心跳是经过了Leader端检测了的, 同时, Follower 可以告诉 Leader
      *
-     * @param cmd   Leader的心跳
+     * @param cmd Leader的心跳
      */
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
@@ -116,13 +111,14 @@ public class RaftClient {
 
                 buildCluster(term, cmd.getResource());
 
-                logger.info("当前节点:{}, 既定Follower关系, 准备心跳反射.", raftNodeRuntime.getSelf());
-                if (heartBeatThread != null && heartBeatThread.isAlive()) {
-                    // 会导致当前心跳线程中断. 此时无需做特俗处理.
+                logger.info("当前节点:{}, 既定Follower关系, Leader:{}, 准备心跳反射.",
+                        raftNodeRuntime.getSelf(), raftNodeRuntime.getLeader());
+                if (heartBeatThread.isAlive()) {
+                    // 中断旧线程, 重新等待
                     heartBeatThread.interrupt();
-                    heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
-                    heartBeatThread.start();
                 }
+                heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
+                heartBeatThread.start();
 
                 return RaftCommand.APPEND_ENTRIES;
             } else {
@@ -156,5 +152,16 @@ public class RaftClient {
         raftNodeRuntime.setCurrentElectionTime(0);
 
         clusterRuntime.setClusterRole(ClusterRole.PROCESSING);
+    }
+
+    private class ClientHeartDeamon implements Runnable {
+
+        @Override
+        public void run() {
+            if (!heartBeatThread.isAlive()) {
+                heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
+                heartBeatThread.start();
+            }
+        }
     }
 }

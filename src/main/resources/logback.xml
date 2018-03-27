@@ -7,7 +7,7 @@
         </encoder>
     </appender>
 
-    <logger name="root" level="INFO">
+    <logger name="root" level="DEBUG">
         <appender-ref ref="console" />
     </logger>
 </configuration>
