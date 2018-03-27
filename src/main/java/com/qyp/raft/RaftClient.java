@@ -71,7 +71,8 @@ public class RaftClient {
                     break f;
                 }
             }
-            if (idx > 0) {
+            int term = Integer.valueOf(cmd.getTerm());
+            if (idx > 0 && term >= raftNodeRuntime.getTerm()) {
                 return leaderElection.dealWithVote(cmd.getResource());
             }
         }
@@ -117,6 +118,7 @@ public class RaftClient {
                     // 中断旧线程, 重新等待
                     heartBeatThread.interrupt();
                 }
+                // 在重建完选举线程之后,
                 heartBeatThread = new Thread(heartBeatTimer, heartBeatTimer.THREAD_NAME);
                 heartBeatThread.start();
 

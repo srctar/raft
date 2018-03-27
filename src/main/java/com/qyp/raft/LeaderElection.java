@@ -79,11 +79,11 @@ public class LeaderElection {
                             && raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
                             && clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
                         raftNodeRuntime.setVoteFor(node);
-                        logger.info("当前节点:{} 接受了 {} 的申请票, 等待接受心跳成为 Follower!!!!!!!!!!!!!!!!!!!",
+                        logger.info("当前节点:{} 接受了{} 的申请票, 等待接受心跳成为Follower!!!!!!!!!!!!!!!!!!!",
                                 raftNodeRuntime.getSelf(), node, raftNodeRuntime.getRole(), raftNodeRuntime.getRole());
                         return RaftCommand.ACCEPT;
                     }
-                    logger.info("当前节点:{} 拒绝了 {} 的申请票, 因为当前角色投票给了:{} 或者当前角色是: {}",
+                    logger.info("当前节点:{} 拒绝了{} 的申请票, 因为当前角色投票给了:{} 或者当前角色是: {}",
                             raftNodeRuntime.getSelf(), node, raftNodeRuntime.getRole(), raftNodeRuntime.getRole());
                 }
             }
@@ -97,7 +97,7 @@ public class LeaderElection {
      */
     public void requestVote() {
 
-        logger.info("当前节点:{}, 角色:{}, 申请 Leader 选举, 成员组成数据:{}, 有:{}",
+        logger.info("当前节点:{}, 角色:{}, 申请Leader选举, 成员组成数据:{}, 有:{}",
                 raftNodeRuntime.getSelf(), raftNodeRuntime.getRole(),
                 clusterRuntime.getClusterMachine().length, Arrays.toString(clusterRuntime.getClusterMachine()));
         if (raftNodeRuntime.getRole() != RaftServerRole.FOLLOWER
@@ -137,7 +137,7 @@ public class LeaderElection {
             /*
               给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
             */
-            logger.info("当前节点:{} 申请Leader选举, 申请 Leader选举, 申请:{}的票", raftNodeRuntime.getSelf(), clusterMachine);
+            logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, 申请:{}的票", raftNodeRuntime.getSelf(), clusterMachine);
             try {
                 RaftCommand cmd = raftRpcLaunchService
                         .requestVote(raftNodeRuntime.getSelf(), clusterMachine, raftNodeRuntime.getTerm());
