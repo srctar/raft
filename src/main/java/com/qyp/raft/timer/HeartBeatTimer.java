@@ -79,10 +79,8 @@ public class HeartBeatTimer implements Runnable {
                     long wait = System.currentTimeMillis() - begin;
                     if (wait >= TIME_OUT &&
                             (System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime()) > TIME_OUT) {
-                        logger.info("当前节点:{} 节点心跳反射, 等待超时. 节点信息:{}, "
-                                        + "选举线程存活情况:{}, 当前执行情况:{}, 当前线程中断情况:{}",
-                                raftNodeRuntime.getSelf(), raftNodeRuntime, electionThread.isAlive(),
-                                runCase(), Thread.currentThread().isInterrupted());
+                        logger.info("当前节点:{} 节点心跳反射, 等待超时. 节点信息:{}, ",
+                                raftNodeRuntime.getSelf(), raftNodeRuntime);
                         // 选举的时间较长. 在此期间如果未能选举成功(得不到多数派投票)
                         // 将会重置选举线程.
                         if (!electionThread.isAlive() && runCase() && !Thread.currentThread().isInterrupted()) {

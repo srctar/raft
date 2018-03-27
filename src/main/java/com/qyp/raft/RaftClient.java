@@ -130,6 +130,7 @@ public class RaftClient {
             // ② 正常情况下的心跳检测.
             if (raftNodeRuntime.getLeader().equalsIgnoreCase(cmd.getResource())) {
                 raftNodeRuntime.setLastHeartTime(System.currentTimeMillis());
+                raftNodeRuntime.setTerm(term);
                 synchronized(heartBeatTimer) {
                     heartBeatTimer.notify();
                 }
