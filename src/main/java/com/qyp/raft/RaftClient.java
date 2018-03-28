@@ -16,9 +16,6 @@
 
 package com.qyp.raft;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.cmd.StandardCommand;
 import com.qyp.raft.data.ClusterRole;
@@ -34,8 +31,6 @@ import com.qyp.raft.timer.HeartBeatTimer;
  * @since 2018-03-13
  */
 public class RaftClient {
-
-    private static final Logger logger = LoggerFactory.getLogger(RaftClient.class);
 
     private LeaderElection leaderElection;
     private ClusterRuntime clusterRuntime;
@@ -97,10 +92,6 @@ public class RaftClient {
      */
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("当前节点:{}, 收到心跳:{}", raftNodeRuntime, cmd);
-        }
-
         if (!raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
             return RaftCommand.APPEND_ENTRIES_DENY;
         }
@@ -121,8 +112,6 @@ public class RaftClient {
                 buildCluster(term, cmd.getResource());
                 raftNodeRuntime.setLastHeartTime(System.currentTimeMillis());
 
-                logger.info("当前节点:{}, 既定Follower关系, Leader:{}, 准备心跳反射.",
-                        raftNodeRuntime.getSelf(), raftNodeRuntime.getLeader());
                 if (heartBeatThread.isAlive()) {
                     // 中断旧线程, 重新等待
                     heartBeatThread.interrupt();

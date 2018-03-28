@@ -25,9 +25,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
@@ -43,7 +40,6 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
  */
 public class CommunicateFollower {
 
-    private static final Logger logger = LoggerFactory.getLogger(CommunicateFollower.class);
     private final ExecutorService executor;
 
     private RaftNodeRuntime raftNodeRuntime;
@@ -71,17 +67,10 @@ public class CommunicateFollower {
     }
 
     public void heartBeat() {
-        if (logger.isDebugEnabled()) {
-            logger.debug("当前节点(Leader):{}, 给Follower节点发心跳, Follower:{}",
-                    raftNodeRuntime.getSelf(), Arrays.toString(clusterRuntime.getClusterMachine()));
-        }
         f:
         for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
             if (!clusterMachine.equalsIgnoreCase(raftNodeRuntime.getSelf())) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳", raftNodeRuntime.getSelf(), clusterMachine);
-                }
                 try {
                     // 这个必须设置超时时间, 否则会导致其它节点的心跳接受时间超时. 进而重复选举.
                     Future<RaftCommand> f = executor.submit(new Callable<RaftCommand>() {
@@ -92,10 +81,6 @@ public class CommunicateFollower {
                         }
                     });
                     RaftCommand cmd = f.get(RaftServer.HEART_TIME, TimeUnit.MILLISECONDS);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, Follower的反应:{}",
-                                raftNodeRuntime.getSelf(), clusterMachine, cmd);
-                    }
                     // 收到仆从机器的心跳反应有: APPEND_ENTRIES、APPEND_ENTRIES_DENY、APPEND_ENTRIES_AGAIN
                     // 如果心跳被拒绝, 则可能自己是老机器, 需要直接重置主机状态
                     if (cmd == RaftCommand.APPEND_ENTRIES_DENY) {
@@ -106,14 +91,8 @@ public class CommunicateFollower {
                 } catch (ExecutionException e) {
                     // 对于windows而言, 一般都是 Connection refused: connect
                     // 对于mac而言, 一般都是 Operation timed out
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, 连接出现异常.",
-                                raftNodeRuntime.getSelf(), clusterMachine, e);
-                    }
                 } catch (TimeoutException e) {
                     // 超时不能管
-                    logger.debug("当前节点(Leader):{}, 给Follower:{}节点发心跳, 处理超时.",
-                            raftNodeRuntime.getSelf(), clusterMachine, e);
                 }
             }
         }

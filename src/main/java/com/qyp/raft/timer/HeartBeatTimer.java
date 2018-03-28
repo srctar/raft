@@ -16,9 +16,6 @@
 
 package com.qyp.raft.timer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.qyp.raft.LeaderElection;
 import com.qyp.raft.Singleton;
 import com.qyp.raft.data.RaftNodeRuntime;
@@ -37,8 +34,6 @@ import com.qyp.raft.data.RaftServerRole;
  */
 @Singleton
 public class HeartBeatTimer implements Runnable {
-
-    private static final Logger logger = LoggerFactory.getLogger(HeartBeatTimer.class);
 
     public final String THREAD_NAME = "Raft-Client-HeartBeat";
 
@@ -80,9 +75,6 @@ public class HeartBeatTimer implements Runnable {
                     long lastHeart = System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime();
 
                     if (wait >= TIME_OUT && lastHeart > TIME_OUT) {
-                        logger.info("当前节点:{} 节点心跳反射, 等待超时. 节点信息:{}, ",
-                                raftNodeRuntime.getSelf(), raftNodeRuntime);
-                        // 2018年3月28日 选举线程不再是一个独立线程
                         // 每次选举都重置当前的选举态
                         if (runCase() && !Thread.currentThread().isInterrupted()) {
 
