@@ -33,6 +33,9 @@ public class ClusterRuntime {
 
     private volatile ClusterRole clusterRole;
 
+    // 全局全变量, 用于在判断在选举态时, 已经投票了, 还是没有投票
+    private volatile boolean inElection;
+
     public String[] getClusterMachine() {
         return clusterMachine;
     }
@@ -47,5 +50,13 @@ public class ClusterRuntime {
 
     public void setClusterRole(ClusterRole clusterRole) {
         this.clusterRole = clusterRole;
+    }
+
+    public boolean isInElection() {
+        return inElection;
+    }
+
+    public void setInElection(boolean inElection) {
+        this.inElection = inElection;
     }
 }

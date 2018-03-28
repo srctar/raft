@@ -56,7 +56,7 @@ public class RaftClient {
     }
 
     /**
-     * 处理投票请求
+     * 处理投票请求, 注意发起投票申请的地方有超时设置, 因此此处必须注意快速失败!
      *
      * @param cmd 来自同级服务器的投票请求
      */
@@ -64,21 +64,24 @@ public class RaftClient {
         // 如果系统刚刚起步, 就接受到了别的服务器的投票申请, 则直接接受投票
         if (clusterRuntime.getClusterRole() == null) {
             clusterRuntime.setClusterRole(ClusterRole.ELECTION);
+            raftNodeRuntime.setVoteFor(cmd.getResource());
             return RaftCommand.ACCEPT;
         }
-        if (raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {
-            int idx = -1;
-            f:
-            for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
-                String clusterMachine = clusterRuntime.getClusterMachine()[i];
-                if (clusterMachine.equalsIgnoreCase(cmd.getResource())) {
-                    idx = i;
-                    break f;
+        int term = Integer.valueOf(cmd.getTerm());
+        // 如过上个选举周期投递了这个机器的票, 还没有选中之前, 依然投这个机器的票.
+        // TODO 这里需要注意一个Case是 "申请者发起投票申请之后,又宕机了". 这个时候需要自动清理掉申请票信息
+        if (raftNodeRuntime.getVoteFor() != null
+                && raftNodeRuntime.getVoteFor().equalsIgnoreCase(cmd.getResource())) {
+            raftNodeRuntime.setTerm(term);
+            clusterRuntime.setClusterRole(ClusterRole.ELECTION);
+            return RaftCommand.ACCEPT;
+        }
+        for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
+            String clusterMachine = clusterRuntime.getClusterMachine()[i];
+            if (clusterMachine.equalsIgnoreCase(cmd.getResource())) {
+                if (term >= raftNodeRuntime.getTerm()) {
+                    return leaderElection.dealWithVote(cmd.getResource());
                 }
-            }
-            int term = Integer.valueOf(cmd.getTerm());
-            if (idx > 0 && term >= raftNodeRuntime.getTerm()) {
-                return leaderElection.dealWithVote(cmd.getResource());
             }
         }
         return RaftCommand.DENY;
@@ -95,7 +98,7 @@ public class RaftClient {
     public RaftCommand dealWithHeartBeat(StandardCommand cmd) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug("当前节点:{}, 收到心跳:{}", raftNodeRuntime.getSelf(), cmd);
+            logger.debug("当前节点:{}, 收到心跳:{}", raftNodeRuntime, cmd);
         }
 
         if (!raftNodeRuntime.getSelf().equalsIgnoreCase(cmd.getTarget())) {

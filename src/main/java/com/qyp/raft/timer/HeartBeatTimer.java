@@ -46,13 +46,13 @@ public class HeartBeatTimer implements Runnable {
     // 由心跳器触发选举器
     private ElectionTimer electionTimer;
 
-    private volatile Thread electionThread;
+    // private volatile Thread electionThread;
 
     public HeartBeatTimer(RaftNodeRuntime raftNodeRuntime, LeaderElection leaderElection) {
         this.raftNodeRuntime = raftNodeRuntime;
 
         electionTimer = new ElectionTimer(leaderElection);
-        electionThread = new Thread(electionTimer);
+        // electionThread = new Thread(electionTimer);
     }
 
     /**
@@ -69,27 +69,31 @@ public class HeartBeatTimer implements Runnable {
         if (raftNodeRuntime.getRole() == RaftServerRole.LEADER) {
             return;
         }
-        while (runCase()) {
+        while (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER) {
+        // while (runCase()) {
             synchronized(this) {
                 try {
                     long begin = System.currentTimeMillis();
-
                     wait(TIME_OUT);
                     // 心跳时间很短, 一个TimeOut会有很多次心跳
                     long wait = System.currentTimeMillis() - begin;
-                    if (wait >= TIME_OUT &&
-                            (System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime()) > TIME_OUT) {
+                    long lastHeart = System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime();
+
+                    if (wait >= TIME_OUT && lastHeart > TIME_OUT) {
                         logger.info("当前节点:{} 节点心跳反射, 等待超时. 节点信息:{}, ",
                                 raftNodeRuntime.getSelf(), raftNodeRuntime);
-                        // 选举的时间较长. 在此期间如果未能选举成功(得不到多数派投票)
-                        // 将会重置选举线程.
-                        if (!electionThread.isAlive() && runCase() && !Thread.currentThread().isInterrupted()) {
+                        // 2018年3月28日 选举线程不再是一个独立线程
+                        // 每次选举都重置当前的选举态
+                        if (runCase() && !Thread.currentThread().isInterrupted()) {
 
                             raftNodeRuntime.setRole(RaftServerRole.FOLLOWER);
                             raftNodeRuntime.setVoteCount(0);
+                            raftNodeRuntime.setVoteFor(null);
 
-                            electionThread = new Thread(electionTimer);
-                            electionThread.start();
+                            // 选举是同步的, 调度选举的线程也是同步的
+                            electionTimer.run();
+                            // electionThread = new Thread(electionTimer);
+                            // electionThread.start();
                         }
                     }
                 } catch (InterruptedException e) {
@@ -100,13 +104,9 @@ public class HeartBeatTimer implements Runnable {
     }
 
     // 节点待投票
-    // 并且投票者只能是自己
-    // 才能参选投票
+    // 才能参选投票, 等待超时.
     private boolean runCase() {
-        return (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER
-                        || raftNodeRuntime.getRole() == RaftServerRole.CANDIDATE)
-                && (raftNodeRuntime.getVoteFor() == null
-                            || raftNodeRuntime.getVoteFor().equalsIgnoreCase(raftNodeRuntime.getSelf())
-                && (System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime()) > TIME_OUT);
+        return (raftNodeRuntime.getRole() == RaftServerRole.FOLLOWER)
+                && (System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime()) > TIME_OUT;
     }
 }
