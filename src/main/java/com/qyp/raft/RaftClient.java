@@ -76,13 +76,21 @@ public class RaftClient {
             clusterRuntime.setClusterRole(ClusterRole.ELECTION);
             return RaftCommand.ACCEPT;
         }
-        for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
-            String clusterMachine = clusterRuntime.getClusterMachine()[i];
-            if (clusterMachine.equalsIgnoreCase(cmd.getResource())) {
-                if (term >= raftNodeRuntime.getTerm()) {
-                    return leaderElection.dealWithVote(cmd.getResource());
+
+        // 在大于四个节点的集群中, Leader宕机, 当导致至少两台或者以上的机器参与选举.
+        // 如果某个选举回合已经选举成功, 将不接受前期未选举成功的, 休眠之后再参与选举的机器的投票
+        long lastHeart = System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime();
+        if (lastHeart > RaftServer.HEART_TIME * 2) {
+
+            for (int i = 0; i < clusterRuntime.getClusterMachine().length; i++) {
+                String clusterMachine = clusterRuntime.getClusterMachine()[i];
+                if (clusterMachine.equalsIgnoreCase(cmd.getResource())) {
+                    if (term >= raftNodeRuntime.getTerm()) {
+                        return leaderElection.dealWithVote(cmd.getResource());
+                    }
                 }
             }
+
         }
         return RaftCommand.DENY;
     }
