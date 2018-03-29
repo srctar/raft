@@ -16,16 +16,14 @@
 
 package com.qyp.raft.cmd;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.qyp.raft.data.t.DataTranslateAdaptor;
+import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.util.Base64Util;
 
 /**
@@ -56,7 +54,7 @@ public class StandardCommand implements Serializable {
     /**
      * 数据交互
      */
-    private byte[] dataNode;
+    private TranslateData dataNode;
     /**
      * 时间戳
      */
@@ -86,11 +84,11 @@ public class StandardCommand implements Serializable {
         this.command = command;
     }
 
-    public byte[] getDataNode() {
+    public TranslateData getDataNode() {
         return dataNode;
     }
 
-    public void setDataNode(byte[] dataNode) {
+    public void setDataNode(TranslateData dataNode) {
         this.dataNode = dataNode;
     }
 
@@ -140,14 +138,11 @@ public class StandardCommand implements Serializable {
     }
 
     public static StandardCommand toCommand(byte[] bb) throws IOException, ClassNotFoundException {
-        return (StandardCommand) new ObjectInputStream(new ByteArrayInputStream(bb)).readObject();
+        return (StandardCommand) DataTranslateAdaptor.getInstance().get(Object.class).decode(bb, StandardCommand.class);
     }
 
     public byte[] toByte() throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(this);
-        return bos.toByteArray();
+        return DataTranslateAdaptor.getInstance().get(Object.class).encode(this);
     }
 
     @Override
@@ -155,7 +150,7 @@ public class StandardCommand implements Serializable {
         return "resource=" + resource + 
                 "&target=" + target + 
                 "&command=" + command +
-                "&dataNode=" + Base64Util.encode(dataNode) +
+                "&dataNode=" + dataNode +
                 "&timestamp=" + timestamp +
                 "&term=" + term;
     }
