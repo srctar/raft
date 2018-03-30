@@ -97,8 +97,7 @@ class TCPMessageHandler {
         RaftCommand cmd = RaftCommand.valueOf(query.getCommand());
         switch (cmd) {
             // TODO SYNC
-            // SYNC 请求可能是 Leader 同步集群数据
-            // 也可能是 Follower 将消息 递交给服务端
+            // SYNC 能是 Follower 将消息 递交给服务端
             case SYNC:
             {
             } break;

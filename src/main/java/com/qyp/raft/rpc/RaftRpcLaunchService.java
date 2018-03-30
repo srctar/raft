@@ -32,8 +32,8 @@ public interface RaftRpcLaunchService {
     RaftCommand notifyFollower(String self, String other, int term) throws IOException;
 
     /**
-     * 对 Follower 进行心跳监测用(当角色为 Leader 时候用, 同步)
+     * Follower向Leader同步数据.
      */
-    void heartCheck();
+    RaftCommand syncLeader(String self, String other, Object data) throws IOException;
 
 }

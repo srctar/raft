@@ -20,6 +20,9 @@ import java.io.IOException;
 
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.cmd.StandardCommand;
+import com.qyp.raft.data.t.DataTranslateAdaptor;
+import com.qyp.raft.data.t.DataTranslateService;
+import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.util.SocketUtil;
 
 /**
@@ -32,28 +35,34 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
 
     @Override
     public RaftCommand requestVote(String self, String other, int term) throws IOException {
-        return simpleRequest(self, other, term, RaftCommand.REQUEST_VOTE);
+        return simpleRequest(self, other, term, RaftCommand.REQUEST_VOTE, null);
     }
 
     @Override
     public RaftCommand notifyFollower(String self, String other, int term) throws IOException {
-        return simpleRequest(self, other, term, RaftCommand.APPEND_ENTRIES);
+        return simpleRequest(self, other, term, RaftCommand.APPEND_ENTRIES, null);
     }
 
-    private RaftCommand simpleRequest(String self, String other, int term, RaftCommand cd) throws IOException {
+    private RaftCommand simpleRequest(String self, String other, int term, RaftCommand cd, Object data)
+            throws IOException {
         StandardCommand cmd = new StandardCommand();
         cmd.setCommand(cd.name());
         cmd.setResource(self);
         cmd.setTarget(other);
         cmd.setTerm(String.valueOf(term));
         cmd.setTimestamp(Long.toString(System.currentTimeMillis()));
+        if (data != null) {
+            DataTranslateService service = DataTranslateAdaptor.getInstance().get(data.getClass());
+            service = service == null ? DataTranslateAdaptor.getInstance().get(Object.class) : service;
+            cmd.setDataNode(new TranslateData(data.getClass(), service.encode(data)));
+        }
         String require = SocketUtil.notifyOfString(other, cmd.toByte());
 
         return RaftCommand.valueOf(require);
     }
 
     @Override
-    public void heartCheck() {
-
+    public RaftCommand syncLeader(String self, String other, Object data) throws IOException {
+        return simpleRequest(self, other, -1, RaftCommand.SYNC, data);
     }
 }

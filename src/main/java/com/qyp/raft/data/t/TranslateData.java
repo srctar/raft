@@ -22,9 +22,30 @@ package com.qyp.raft.data.t;
  * @author yupeng.qin
  * @since 2018-03-29
  */
-public interface TranslateData<T> {
+public class TranslateData<T> {
 
-    Class<T> type();
+    private Class<T> type;
 
-    byte[] data();
+    private byte[] data;
+
+    public TranslateData(Class<T> type, byte[] data) {
+        this.type = type;
+        this.data = data;
+    }
+
+    public Class<T> getType() {
+        return type;
+    }
+
+    public void setType(Class<T> type) {
+        this.type = type;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data;
+    }
 }
