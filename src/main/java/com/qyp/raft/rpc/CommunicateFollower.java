@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.qyp.raft;
+package com.qyp.raft.rpc;
 
 import java.util.Arrays;
 import java.util.concurrent.Callable;
@@ -28,12 +28,12 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.qyp.raft.RaftServer;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
-import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
  * Leader跟跟随者之间的交互

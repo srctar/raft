@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.qyp.raft.LeaderElection;
-import com.qyp.raft.Singleton;
+import com.qyp.raft.cmd.Singleton;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.data.RaftServerRole;
 

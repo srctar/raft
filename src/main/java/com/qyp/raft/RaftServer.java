@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
+import com.qyp.raft.rpc.CommunicateFollower;
 
 /**
  * Leader 向客户机发心跳的定时任务

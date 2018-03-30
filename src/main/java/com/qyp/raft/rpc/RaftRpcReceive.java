@@ -26,7 +26,7 @@ import java.util.Random;
 
 import com.qyp.raft.RaftClient;
 import com.qyp.raft.RaftServer;
-import com.qyp.raft.Singleton;
+import com.qyp.raft.cmd.Singleton;
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
 

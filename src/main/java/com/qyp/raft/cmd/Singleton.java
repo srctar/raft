@@ -1,4 +1,4 @@
-package com.qyp.raft;
+package com.qyp.raft.cmd;
 
 /**
  * 无具体用处, 打上这个标记的类, 需要单例

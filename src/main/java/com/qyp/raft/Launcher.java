@@ -22,10 +22,10 @@ import java.util.Set;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.data.RaftServerRole;
+import com.qyp.raft.rpc.CommunicateFollower;
 import com.qyp.raft.rpc.RaftRpcLaunch;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 import com.qyp.raft.rpc.RaftRpcReceive;
-import com.qyp.raft.rpc.RaftRpcReceiveService;
 import com.qyp.raft.timer.HeartBeatTimer;
 
 /**

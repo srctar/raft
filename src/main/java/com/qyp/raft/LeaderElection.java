@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.qyp.raft.cmd.RaftCommand;
+import com.qyp.raft.cmd.Singleton;
 import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
