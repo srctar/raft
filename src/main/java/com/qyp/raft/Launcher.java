@@ -80,7 +80,7 @@ public class Launcher {
         heartBeatTimer = new HeartBeatTimer(raftNodeRuntime, leaderElection);
         raftClient = new RaftClient(leaderElection, clusterRuntime, raftNodeRuntime, heartBeatTimer);
 
-        receiveService = new RaftRpcReceive(raftClient, communicateFollower);
+        receiveService = new RaftRpcReceive(raftClient, raftServer);
         receiveService.setConfigPort(port);
         receiveService.getStart();
 

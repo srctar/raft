@@ -39,11 +39,11 @@ class TCPMessageHandler {
     private static final int TCP_BUFFER_SIZE = 1 << 20;
 
     private RaftClient raftClient;
-    private CommunicateFollower communicateFollower;
+    private RaftServer raftServer;
 
-    public TCPMessageHandler(RaftClient raftClient, CommunicateFollower communicateFollower) {
+    public TCPMessageHandler(RaftClient raftClient, RaftServer raftServer) {
         this.raftClient = raftClient;
-        this.communicateFollower = communicateFollower;
+        this.raftServer = raftServer;
     }
 
     public void handleKey(SelectionKey key) throws IOException {
