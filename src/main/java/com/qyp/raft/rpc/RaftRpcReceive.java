@@ -66,8 +66,8 @@ public class RaftRpcReceive {
     private Selector selector;
     private ServerSocketChannel listenerChannel;
 
-    public RaftRpcReceive(RaftClient raftClient, RaftServer raftServer) {
-        HANDLER = new TCPMessageHandler(raftClient, raftServer);
+    public RaftRpcReceive(RaftClient raftClient, CommunicateFollower communicateFollower) {
+        HANDLER = new TCPMessageHandler(raftClient, communicateFollower);
         DestroyAdaptor.getInstance().add(new Destroyable() {
             @Override
             public void destroy() {

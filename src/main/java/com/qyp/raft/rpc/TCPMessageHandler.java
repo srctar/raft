@@ -39,11 +39,11 @@ class TCPMessageHandler {
     private static final int TCP_BUFFER_SIZE = 1 << 20;
 
     private RaftClient raftClient;
-    private RaftServer raftServer;
+    private CommunicateFollower communicateFollower;
 
-    public TCPMessageHandler(RaftClient raftClient, RaftServer raftServer) {
+    public TCPMessageHandler(RaftClient raftClient, CommunicateFollower communicateFollower) {
         this.raftClient = raftClient;
-        this.raftServer = raftServer;
+        this.communicateFollower = communicateFollower;
     }
 
     public void handleKey(SelectionKey key) throws IOException {
@@ -96,8 +96,7 @@ class TCPMessageHandler {
     private String handleEachQuery(StandardCommand query) throws IOException {
         RaftCommand cmd = RaftCommand.valueOf(query.getCommand());
         switch (cmd) {
-            // TODO SYNC
-            // SYNC 能是 Follower 将消息 递交给服务端
+            // SYNC 只是是 Follower 将消息 递交给服务端
             case SYNC:
             {
             } break;
