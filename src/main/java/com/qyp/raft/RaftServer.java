@@ -19,6 +19,7 @@ package com.qyp.raft;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
@@ -38,6 +39,9 @@ public class RaftServer {
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     private CommunicateFollower communicateFollower;
+
+    private ReentrantLock lock = new ReentrantLock();
+
     private HeartBeat heartBeat = new HeartBeat();
     private volatile boolean run = false;
     // 防止子线程尚未进行完毕, 父线程又一次提交
@@ -59,6 +63,22 @@ public class RaftServer {
         });
     }
 
+    /**
+     * 2018年4月8日
+     *
+     * 当前的服务端对客户端的同步不支持队列, 即来一条同步命令处理一条.
+     * 后续来到的消息直接拒绝.
+     */
+    public void sync(Object data) {
+        if (lock.tryLock()) {
+            try {
+                communicateFollower.sync(data);
+            } finally {
+                lock.unlock();
+            }
+        }
+    }
+
     private class HeartBeat implements Runnable {
 
         @Override
@@ -70,5 +90,4 @@ public class RaftServer {
             }
         }
     }
-
 }

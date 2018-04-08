@@ -39,8 +39,8 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
     }
 
     @Override
-    public RaftCommand notifyFollower(String self, String other, int term) throws IOException {
-        return simpleRequest(self, other, term, RaftCommand.APPEND_ENTRIES, null);
+    public RaftCommand notifyFollower(String self, String other, int term, RaftCommand cmd) throws IOException {
+        return simpleRequest(self, other, term, cmd, null);
     }
 
     private RaftCommand simpleRequest(String self, String other, int term, RaftCommand cd, Object data)
@@ -64,5 +64,10 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
     @Override
     public RaftCommand syncLeader(String self, String other, Object data) throws IOException {
         return simpleRequest(self, other, -1, RaftCommand.SYNC, data);
+    }
+
+    @Override
+    public RaftCommand syncFollower(String self, String other, Object data) throws IOException {
+        return simpleRequest(self, other, -1, RaftCommand.APPEND_ENTRIES, data);
     }
 }

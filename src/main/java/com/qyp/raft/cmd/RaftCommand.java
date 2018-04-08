@@ -30,6 +30,11 @@ public enum RaftCommand {
     SYNC,
 
     /**
+     * Follower接收Leader的提交请求用.
+     */
+    COMMIT,
+
+    /**
      * Leader 请求被选举
      */
     REQUEST_VOTE,

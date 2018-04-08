@@ -29,11 +29,16 @@ public interface RaftRpcLaunchService {
     /**
      * 周知自身的主角关系
      */
-    RaftCommand notifyFollower(String self, String other, int term) throws IOException;
+    RaftCommand notifyFollower(String self, String other, int term, RaftCommand cmd) throws IOException;
 
     /**
      * Follower向Leader同步数据.
      */
     RaftCommand syncLeader(String self, String other, Object data) throws IOException;
+
+    /**
+     * Follower向Leader同步数据.
+     */
+    RaftCommand syncFollower(String self, String other, Object data) throws IOException;
 
 }
