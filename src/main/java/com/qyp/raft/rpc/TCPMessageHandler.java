@@ -96,11 +96,12 @@ class TCPMessageHandler {
     private String handleEachQuery(StandardCommand query) throws IOException {
         RaftCommand cmd = RaftCommand.valueOf(query.getCommand());
         switch (cmd) {
-            // SYNC 只是是 Follower 将消息 递交给服务端
-            case SYNC:
-            {
-            } break;
+            // SYNC_LEADER 只是是 Follower 将消息 递交给服务端
+            case SYNC_LEADER: return raftServer.sync(query.getDataNode()).name();
+            // COMMIT 便是服务端将周知的数据做提交
+            case COMMIT:
             case REQUEST_VOTE: return raftClient.dealWithVote(query).name();
+            // 可以是心跳, 更可以在心跳中附加同步信息
             case APPEND_ENTRIES: return raftClient.dealWithHeartBeat(query).name();
             default:break;
         }

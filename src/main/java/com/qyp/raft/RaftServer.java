@@ -21,6 +21,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.qyp.raft.cmd.RaftCommand;
+import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
 import com.qyp.raft.rpc.CommunicateFollower;
@@ -69,14 +71,17 @@ public class RaftServer {
      * 当前的服务端对客户端的同步不支持队列, 即来一条同步命令处理一条.
      * 后续来到的消息直接拒绝.
      */
-    public void sync(Object data) {
+    public RaftCommand sync(TranslateData data) {
         if (lock.tryLock()) {
             try {
-                communicateFollower.sync(data);
+                return communicateFollower.sync(data.getData()) ? RaftCommand.APPEND_ENTRIES : RaftCommand.APPEND_ENTRIES_AGAIN;
+            } catch (Exception e) {
+                return RaftCommand.APPEND_ENTRIES_DENY;
             } finally {
                 lock.unlock();
             }
         }
+        return RaftCommand.APPEND_ENTRIES_AGAIN;
     }
 
     private class HeartBeat implements Runnable {

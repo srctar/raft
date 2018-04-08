@@ -63,7 +63,7 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
 
     @Override
     public RaftCommand syncLeader(String self, String other, Object data) throws IOException {
-        return simpleRequest(self, other, -1, RaftCommand.SYNC, data);
+        return simpleRequest(self, other, -1, RaftCommand.SYNC_LEADER, data);
     }
 
     @Override

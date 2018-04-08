@@ -35,6 +35,7 @@ import com.qyp.raft.RaftServer;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
+import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
 
@@ -82,6 +83,7 @@ public class CommunicateFollower {
      */
     public boolean sync(Object sync) {
         boolean record = false;
+        // 此处不适用过半原则, 必须得所有的Follower都同意该次变更, 变更才能进行.
         if (syncFollower(new Sync() {
             @Override
             public RaftCommand doSync(String clusterMachine) throws IOException {

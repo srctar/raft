@@ -27,7 +27,7 @@ public enum RaftCommand {
     /**
      * 集群节点之间同步数据用
      */
-    SYNC,
+    SYNC_LEADER,
 
     /**
      * Follower接收Leader的提交请求用.
