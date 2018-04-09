@@ -25,6 +25,7 @@ import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.data.RaftServerRole;
+import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.timer.HeartBeatTimer;
 
 /**
@@ -43,6 +44,9 @@ public class RaftClient {
     private RaftNodeRuntime raftNodeRuntime;
 
     private static volatile Thread heartBeatThread = null;
+    // 没有根据Raft协议做日志功能, 因此每次只能交换一条数据
+    // 交换完毕之后共享变量置空.
+    private volatile TranslateData share = null;
 
     public RaftClient(LeaderElection leaderElection, ClusterRuntime clusterRuntime,
                       RaftNodeRuntime raftNodeRuntime, HeartBeatTimer heartBeatTimer) {
@@ -93,6 +97,42 @@ public class RaftClient {
 
         }
         return RaftCommand.DENY;
+    }
+
+    /**
+     * 当前同步请求来临之时, 不需要关心上次同步的情况.
+     * 次序由Leader保证.
+     *
+     * Commit和Sync一定是成对的
+     */
+    public RaftCommand dealWithSync(StandardCommand cmd) {
+
+        // 只处理来自Leader的请求
+        if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
+                && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {
+            this.share = cmd.getDataNode();
+            return RaftCommand.APPEND_ENTRIES;
+        }
+
+        return RaftCommand.APPEND_ENTRIES_DENY;
+    }
+
+    /**
+     * 当前同步请求来临之时, 不需要关心上次同步的情况.
+     * 次序由Leader保证.
+     *
+     * Commit和Sync一定是成对的
+     */
+    public RaftCommand dealWithCommit(StandardCommand cmd) {
+
+        // 只处理来自Leader的请求
+        if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
+                && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {
+            this.share = cmd.getDataNode();
+            return RaftCommand.APPEND_ENTRIES;
+        }
+
+        return RaftCommand.APPEND_ENTRIES_DENY;
     }
 
     /**

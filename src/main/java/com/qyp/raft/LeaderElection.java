@@ -167,7 +167,7 @@ public class LeaderElection {
                         break f;
                     }
                 } else if (cmd == RaftCommand.DENY) {
-                    // 如果被拒绝, 则累加term. 重新选举
+                    // TODO 如果被拒绝, 则累加term. 重新选举
                 } else {
                     logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, {}表态为: {}",
                             raftNode.getSelf(), clusterMachine, cmd);

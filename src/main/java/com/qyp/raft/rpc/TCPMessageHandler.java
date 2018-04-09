@@ -98,6 +98,7 @@ class TCPMessageHandler {
         switch (cmd) {
             // SYNC_LEADER 只是是 Follower 将消息 递交给服务端
             case SYNC_LEADER: return raftServer.sync(query.getDataNode()).name();
+            case SYNC_FOLLOWER: return raftClient.dealWithSync(query).name();
             // COMMIT 便是服务端将周知的数据做提交
             case COMMIT:
             case REQUEST_VOTE: return raftClient.dealWithVote(query).name();
