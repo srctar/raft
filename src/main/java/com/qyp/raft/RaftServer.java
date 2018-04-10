@@ -21,6 +21,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.hook.DestroyAdaptor;
@@ -34,6 +37,8 @@ import com.qyp.raft.rpc.CommunicateFollower;
  * @since 2018-03-19
  */
 public class RaftServer {
+
+    private static final Logger logger = LoggerFactory.getLogger(RaftServer.class);
 
     public static final long HEART_TIME = 100L;
 
@@ -73,6 +78,7 @@ public class RaftServer {
      */
     public RaftCommand sync(TranslateData data) {
         if (lock.tryLock()) {
+            logger.info("当前Raft角色:Leader, 正在处理Follower的同步请求...");
             try {
                 return communicateFollower.sync(data.getData()) ? RaftCommand.APPEND_ENTRIES : RaftCommand.APPEND_ENTRIES_AGAIN;
             } catch (Exception e) {

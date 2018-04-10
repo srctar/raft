@@ -111,6 +111,7 @@ public class RaftClient {
      */
     public RaftCommand dealWithSync(StandardCommand cmd) {
 
+        logger.info("收到来自Leader端的同步请求.{}", cmd);
         // 只处理来自Leader的请求
         if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
                 && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {
@@ -119,6 +120,9 @@ public class RaftClient {
                 Class type = data.getType() == null ? Object.class : data.getType();
                 byte[] byt = data.getData();
                 DataTranslateService se = DataTranslateAdaptor.getInstance().get(type);
+                if (se == null) {
+                    se = DataTranslateAdaptor.getInstance().get(Object.class);
+                }
                 try {
                     Object translate = se.decode(byt, type);
                     this.share = translate;
@@ -141,6 +145,7 @@ public class RaftClient {
      */
     public synchronized RaftCommand dealWithCommit(StandardCommand cmd) {
 
+        logger.info("收到来自Leader端的同步提交请求.{}, 提交的数据是:{}", cmd, share);
         // 只处理来自Leader的请求
         if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
                 && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {

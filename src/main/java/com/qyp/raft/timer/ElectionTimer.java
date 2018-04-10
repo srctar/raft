@@ -41,7 +41,6 @@ class ElectionTimer implements Runnable {
             TimeUnit.MILLISECONDS.sleep((long) (Math.random() * 150) + 150);
         } catch (InterruptedException e) {
             // 这个线程一般不会被中断
-            e.printStackTrace();
         }
         leaderElection.requestVote();
     }

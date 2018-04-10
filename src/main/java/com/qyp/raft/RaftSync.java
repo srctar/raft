@@ -18,7 +18,6 @@ package com.qyp.raft;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.qyp.raft.cmd.RaftCommand;
@@ -139,7 +138,6 @@ public class RaftSync {
     private boolean syncLeader(Object obj) {
         try {
             RaftCommand cmd = raftRpcLaunch.syncLeader(raftNodeRuntime.getSelf(), raftNodeRuntime.getLeader(), obj);
-
             switch (cmd) {
                 // Leader存在待处理队列, 需要不断重试以便于插入成功
                 case APPEND_ENTRIES_AGAIN:
@@ -153,6 +151,7 @@ public class RaftSync {
                     throw new IllegalStateException("同步出现异常, 请稍后重试!");
             }
         } catch (IOException e) {
+            e.printStackTrace();
         }
         return false;
     }

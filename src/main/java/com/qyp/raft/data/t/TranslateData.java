@@ -16,13 +16,15 @@
 
 package com.qyp.raft.data.t;
 
+import java.io.Serializable;
+
 /**
  * 用于集群间交换数据的储存.
  *
  * @author yupeng.qin
  * @since 2018-03-29
  */
-public class TranslateData<T> {
+public class TranslateData<T> implements Serializable {
 
     private Class<T> type;
 

@@ -35,15 +35,15 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
 
     @Override
     public RaftCommand requestVote(String self, String other, int term) throws IOException {
-        return simpleRequest(self, other, term, RaftCommand.REQUEST_VOTE, null);
+        return simpleRequest(self, other, term, RaftCommand.REQUEST_VOTE, null, null);
     }
 
     @Override
     public RaftCommand notifyFollower(String self, String other, int term, RaftCommand cmd) throws IOException {
-        return simpleRequest(self, other, term, cmd, null);
+        return simpleRequest(self, other, term, cmd, null, null);
     }
 
-    private RaftCommand simpleRequest(String self, String other, int term, RaftCommand cd, Object data)
+    private RaftCommand simpleRequest(String self, String other, int term, RaftCommand cd, Object data, Integer timeOut)
             throws IOException {
         StandardCommand cmd = new StandardCommand();
         cmd.setCommand(cd.name());
@@ -56,18 +56,22 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
             service = service == null ? DataTranslateAdaptor.getInstance().get(Object.class) : service;
             cmd.setDataNode(new TranslateData(data.getClass(), service.encode(data)));
         }
-        String require = SocketUtil.notifyOfString(other, cmd.toByte());
+        String require = SocketUtil.notifyOfString(other, cmd.toByte(), timeOut == null ? 100 : timeOut.intValue());
 
         return RaftCommand.valueOf(require);
     }
 
+    /**
+     * 对Leader的同步设计到:
+     * 同步->通知->提交->返回 四个流程, 因此超时时间设置更长
+     */
     @Override
     public RaftCommand syncLeader(String self, String other, Object data) throws IOException {
-        return simpleRequest(self, other, -1, RaftCommand.SYNC_LEADER, data);
+        return simpleRequest(self, other, -1, RaftCommand.SYNC_LEADER, data, 300);
     }
 
     @Override
     public RaftCommand syncFollower(String self, String other, Object data) throws IOException {
-        return simpleRequest(self, other, -1, RaftCommand.APPEND_ENTRIES, data);
+        return simpleRequest(self, other, -1, RaftCommand.SYNC_FOLLOWER, data, null);
     }
 }

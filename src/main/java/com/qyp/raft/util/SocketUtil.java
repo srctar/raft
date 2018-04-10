@@ -39,8 +39,8 @@ public class SocketUtil {
      */
     public static final int MAX_BUFFER_SIZE = 1024;
 
-    public static final String notifyOfString(String host, byte[] bt) throws IOException {
-        return Charset.forName("UTF-8").newDecoder().decode(notifyOf(host, bt)).toString();
+    public static final String notifyOfString(String host, byte[] bt, int timeOut) throws IOException {
+        return Charset.forName("UTF-8").newDecoder().decode(notifyOf(host, bt, timeOut)).toString();
     }
 
     public static final byte[] notifyOfByte(String host, byte[] bt) throws IOException {

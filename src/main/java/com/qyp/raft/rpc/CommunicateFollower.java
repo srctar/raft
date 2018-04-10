@@ -35,7 +35,6 @@ import com.qyp.raft.RaftServer;
 import com.qyp.raft.cmd.RaftCommand;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
-import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
 
@@ -61,9 +60,7 @@ public class CommunicateFollower {
         this.clusterRuntime = clusterRuntime;
         this.raftRpcLaunchService = raftRpcLaunchService;
 
-        int size = clusterRuntime.getClusterMachine().length / 2;
-        size = size > 0 ? size : 1;
-        // 线程池保证有总机器数的一半提供服务.
+        int size = clusterRuntime.getClusterMachine().length;
         executor = Executors.newFixedThreadPool(size);
 
         DestroyAdaptor.getInstance().add(new Destroyable() {
@@ -84,6 +81,7 @@ public class CommunicateFollower {
     public boolean sync(Object sync) {
         boolean record = false;
         // 此处不适用过半原则, 必须得所有的Follower都同意该次变更, 变更才能进行.
+        // Leader不能忘记自己的同步
         if (syncFollower(new Sync() {
             @Override
             public RaftCommand doSync(String clusterMachine) throws IOException {
@@ -102,7 +100,7 @@ public class CommunicateFollower {
                             raftNodeRuntime.getTerm(), RaftCommand.COMMIT);
                 }
             })) && ty < 3) {
-                ty ++;
+                ty++;
             }
         }
         return record;
@@ -113,33 +111,32 @@ public class CommunicateFollower {
         if ((len = clusterRuntime.getClusterMachine().length) == 1) {
             return true;
         }
-        List<Future<RaftCommand>> futures = new ArrayList<>(len - 1);
+        List<Future<RaftCommand>> futures = new ArrayList<>(len);
         f:
         for (int i = 0; i < len; i++) {
+            // 注意Leader自己也需要给Leader自身发消息, 以及提交.
             String clusterMachine = clusterRuntime.getClusterMachine()[i];
-            if (!clusterMachine.equalsIgnoreCase(raftNodeRuntime.getSelf())) {
-                // 这个必须设置超时时间, 否则会导致其它节点的心跳接受时间超时. 进而重复选举.
-                futures.add(executor.submit(new Callable<RaftCommand>() {
-                    @Override
-                    public RaftCommand call() throws Exception {
-                        return command.doSync(clusterMachine);
-                    }
-                }));
-            }
+            // 这个必须设置超时时间, 否则会导致其它节点的心跳接受时间超时. 进而重复选举.
+            futures.add(executor.submit(new Callable<RaftCommand>() {
+                @Override
+                public RaftCommand call() throws Exception {
+                    return command.doSync(clusterMachine);
+                }
+            }));
         }
         int count = 0;
-        for (Future<RaftCommand> f: futures) {
+        for (Future<RaftCommand> f : futures) {
             try {
                 RaftCommand cmd = f.get(RaftServer.HEART_TIME, TimeUnit.MILLISECONDS);
                 if (cmd == RaftCommand.APPEND_ENTRIES) {
-                    count ++;
+                    count++;
                 }
             } catch (InterruptedException e) {
             } catch (ExecutionException e) {
             } catch (TimeoutException e) {
             }
         }
-        return count == len - 1;
+        return count == len;
     }
 
     private interface Sync {
