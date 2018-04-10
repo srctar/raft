@@ -100,7 +100,7 @@ class TCPMessageHandler {
             case SYNC_LEADER: return raftServer.sync(query.getDataNode()).name();
             case SYNC_FOLLOWER: return raftClient.dealWithSync(query).name();
             // COMMIT 便是服务端将周知的数据做提交
-            case COMMIT:
+            case COMMIT: return raftClient.dealWithCommit(query).name();
             case REQUEST_VOTE: return raftClient.dealWithVote(query).name();
             // 可以是心跳, 更可以在心跳中附加同步信息
             case APPEND_ENTRIES: return raftClient.dealWithHeartBeat(query).name();

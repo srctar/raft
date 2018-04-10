@@ -31,13 +31,12 @@ import com.qyp.raft.hook.DestroyAdaptor;
 import com.qyp.raft.hook.Destroyable;
 
 /**
- * 对于来自于集群其它节点的请求的访问
+ * 对于来自于集群其它节点的请求的访问, 因此, 这个类将很容易被替代, 只需要能够暴露自己的通讯地址, 以及收到别的机器的消息即可.
  * <p>
  * 远程访问的发起有如下Case:
  * ① 发起投票申请
  * ② 发起心跳
- * ③ Follower 向 Leader 发起日志同步请求     TODO
- * ④ Leader 向 Follower 同步日志请求请求     TODO
+ * ③ 数据同步
  * <p>
  * 有请求就需要有响应
  *

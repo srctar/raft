@@ -50,12 +50,16 @@ public class Launcher {
 
     private HeartBeatTimer heartBeatTimer;
 
-    public Launcher(RaftRpcReceive receiveService, RaftRpcLaunchService launchService) {
-        this.receiveService = receiveService;
+    // 使用前需要构造器初始化
+    private static RaftSync sync;
+
+    public Launcher(RaftRpcLaunchService launchService,
+                    String ip, int port, Set<String> cluster, boolean userSystemPort) {
+        this(ip, port, cluster, userSystemPort);
         this.launchService = launchService;
     }
 
-    public Launcher(String ip, int port, Set<String> cluster) {
+    public Launcher(String ip, int port, Set<String> cluster, boolean userSystemPort) {
 
         String contract = ip + ":" + port;
         if (cluster == null) {
@@ -80,9 +84,17 @@ public class Launcher {
         heartBeatTimer = new HeartBeatTimer(raftNodeRuntime, leaderElection);
         raftClient = new RaftClient(leaderElection, clusterRuntime, raftNodeRuntime, heartBeatTimer);
 
-        receiveService = new RaftRpcReceive(raftClient, raftServer);
-        receiveService.setConfigPort(port);
-        receiveService.getStart();
+        if (userSystemPort) {
+            receiveService = new RaftRpcReceive(raftClient, raftServer);
+            receiveService.setConfigPort(port);
+            receiveService.getStart();
+        }
 
+        sync = new RaftSync(raftNodeRuntime, clusterRuntime, launchService, raftServer);
     }
+
+    public static RaftSync getSync() {
+        return sync;
+    }
+
 }

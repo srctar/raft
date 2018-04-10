@@ -16,6 +16,8 @@
 
 package com.qyp.raft;
 
+import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +27,8 @@ import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.data.RaftServerRole;
+import com.qyp.raft.data.t.DataTranslateAdaptor;
+import com.qyp.raft.data.t.DataTranslateService;
 import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.timer.HeartBeatTimer;
 
@@ -46,7 +50,7 @@ public class RaftClient {
     private static volatile Thread heartBeatThread = null;
     // 没有根据Raft协议做日志功能, 因此每次只能交换一条数据
     // 交换完毕之后共享变量置空.
-    private volatile TranslateData share = null;
+    private volatile Object share = null;
 
     public RaftClient(LeaderElection leaderElection, ClusterRuntime clusterRuntime,
                       RaftNodeRuntime raftNodeRuntime, HeartBeatTimer heartBeatTimer) {
@@ -110,7 +114,19 @@ public class RaftClient {
         // 只处理来自Leader的请求
         if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
                 && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {
-            this.share = cmd.getDataNode();
+            TranslateData data = cmd.getDataNode();
+            if (data != null) {
+                Class type = data.getType() == null ? Object.class : data.getType();
+                byte[] byt = data.getData();
+                DataTranslateService se = DataTranslateAdaptor.getInstance().get(type);
+                try {
+                    Object translate = se.decode(byt, type);
+                    this.share = translate;
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                    return RaftCommand.APPEND_ENTRIES_DENY;
+                }
+            }
             return RaftCommand.APPEND_ENTRIES;
         }
 
@@ -123,12 +139,13 @@ public class RaftClient {
      *
      * Commit和Sync一定是成对的
      */
-    public RaftCommand dealWithCommit(StandardCommand cmd) {
+    public synchronized RaftCommand dealWithCommit(StandardCommand cmd) {
 
         // 只处理来自Leader的请求
         if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
                 && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {
-            this.share = cmd.getDataNode();
+            RaftWatcher.RaftWatcherDispatcher.syncAll(this.share);
+            this.share = null;
             return RaftCommand.APPEND_ENTRIES;
         }
 

@@ -26,6 +26,9 @@ import com.qyp.raft.data.ClusterRole;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.data.RaftServerRole;
+import com.qyp.raft.data.t.DataTranslateAdaptor;
+import com.qyp.raft.data.t.DataTranslateService;
+import com.qyp.raft.data.t.TranslateData;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
 
 /**
@@ -52,43 +55,66 @@ import com.qyp.raft.rpc.RaftRpcLaunchService;
 public class RaftSync {
 
     private ReentrantLock lock;
-    private Condition notFull;
 
     private RaftNodeRuntime raftNodeRuntime;
     private ClusterRuntime clusterRuntime;
 
     private RaftRpcLaunchService raftRpcLaunch;
 
-    public boolean sync(Object e, long timeout, TimeUnit unit)
-            throws InterruptedException {
+    private RaftServer raftServer;
 
-        if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
-            return false;
-        }
-        long nanos = unit.toNanos(timeout);
-        final ReentrantLock lock = this.lock;
-        lock.lockInterruptibly();
-        return false;
-    }
+    RaftSync(RaftNodeRuntime raftNodeRuntime, ClusterRuntime clusterRuntime,
+                    RaftRpcLaunchService raftRpcLaunch, RaftServer raftServer) {
+        this.raftNodeRuntime = raftNodeRuntime;
+        this.clusterRuntime = clusterRuntime;
+        this.raftRpcLaunch = raftRpcLaunch;
+        this.raftServer = raftServer;
 
-    public boolean sync(Object e)
-            throws InterruptedException {
-        if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
-            return false;
-        }
-        final ReentrantLock lock = this.lock;
-        lock.lockInterruptibly();
-        return false;
+        lock = new ReentrantLock();
     }
 
     /**
-     * 直接申请数据同步, 不阻塞
-     * @param o 申请同步的对象.
-     *
-     * @return  同步成功与否.
+     * 向Raft集群发起同步.
+     * 在一个指定的同步期间内, 如果同步不能成功, 则会多次同步. 直至同步成功, 或者时间完毕
      */
-    public boolean put(Object o) {
-        if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION) {
+    public boolean syncMultile(Object e, long timeout, TimeUnit unit)
+            throws InterruptedException {
+
+        long nanos = unit.toNanos(timeout);
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            // 存在多种原因导致同步失败, 因此在等待时间内只要没有成功都可以一直重试
+            long nano = System.nanoTime();
+            while (!doSync(e)) {
+                if (nanos >= System.nanoTime() - nano) {
+                    return false;
+                }
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /*
+    之所以加锁, 是因为单机可能存在多线程, 对集群的同步.
+    而多线程的集群同步, 在Leader端本身就是被禁止的.
+    因此加个锁, 能更高的保证同步成功率.
+     */
+    public boolean sync(Object e)
+            throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            return doSync(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private boolean doSync(Object o) {
+        if (clusterRuntime.getClusterRole() == ClusterRole.ELECTION || o == null) {
             return false;
         }
         // follower 节点需要把信息告知Leader
@@ -98,9 +124,16 @@ public class RaftSync {
             } catch (Exception e) {
                 return false;
             }
+        } else {
+            DataTranslateService service = DataTranslateAdaptor.getInstance().get(o.getClass());
+            service = service == null ? DataTranslateAdaptor.getInstance().get(Object.class) : service;
+            try {
+                RaftCommand cmd = raftServer.sync(new TranslateData(o.getClass(), service.encode(o)));
+                return cmd == RaftCommand.APPEND_ENTRIES;
+            } catch (IOException e) {
+                return false;
+            }
         }
-
-        return true;
     }
 
     private boolean syncLeader(Object obj) {

@@ -16,33 +16,36 @@
 
 package com.qyp.raft;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Main
+ * 集群间同步功能的对外服务对象, 需要集群中数据同步者请实现这个类。
+ * 集群数据有收有发, 收用 {@link RaftSync}
+ *
+ * @author yupeng.qin
+ * @since 2018-04-09
  */
-public class App {
+public abstract class RaftWatcher {
 
-    public static void main(String[] args) throws IOException {
+    private static List<RaftWatcher> CHILD = new ArrayList<>();
 
-        File f = new File(args[2]);
-        Set<String> set = new HashSet<>();
+    protected abstract void sync(Object obj);
 
-        BufferedReader br =
-                new BufferedReader(new InputStreamReader(new FileInputStream(f)));
-        String s;
-        while ((s = br.readLine()) != null)
-            set.add(s);
+    public RaftWatcher() {
+        CHILD.add(this);
+    }
 
-        new Launcher(args[0], Integer.valueOf(args[1]), set, true);
+    public static class RaftWatcherDispatcher {
 
+        public static void syncAll(Object sync) {
+            if (sync == null) {
+                return;
+            }
+            for (RaftWatcher watcher: CHILD) {
+                watcher.sync(sync);
+            }
+        }
     }
 
 }
