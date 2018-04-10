@@ -100,4 +100,39 @@ public class Launcher {
         return sync;
     }
 
+    public RaftRpcReceive getReceiveService() {
+        return receiveService;
+    }
+
+    public RaftRpcLaunchService getLaunchService() {
+        return launchService;
+    }
+
+    public CommunicateFollower getCommunicateFollower() {
+        return communicateFollower;
+    }
+
+    public RaftServer getRaftServer() {
+        return raftServer;
+    }
+
+    public RaftClient getRaftClient() {
+        return raftClient;
+    }
+
+    public LeaderElection getLeaderElection() {
+        return leaderElection;
+    }
+
+    public ClusterRuntime getClusterRuntime() {
+        return clusterRuntime;
+    }
+
+    public RaftNodeRuntime getRaftNodeRuntime() {
+        return raftNodeRuntime;
+    }
+
+    public HeartBeatTimer getHeartBeatTimer() {
+        return heartBeatTimer;
+    }
 }
