@@ -81,12 +81,12 @@ public class LeaderElection {
             // 通过设置之后心跳时间可以避免心跳超时.
             raftNode.setLastHeartTime(System.currentTimeMillis());
             cluster.setClusterRole(ClusterRole.ELECTION);
-            logger.info("当前节点:{}, 角色:{}, 接受了{} 的申请票, ", raftNode.getSelf(), raftNode.getRole(), node);
+            logger.debug("当前节点:{}, 角色:{}, 接受了{} 的申请票, ", raftNode.getSelf(), raftNode.getRole(), node);
 
             return RaftCommand.ACCEPT;
         }
 
-        logger.info("当前节点:{} 拒绝了{} 的申请票, 因为当前角色投票给了:{} 或者当前角色是: {}, 或者集群非选举态.",
+        logger.debug("当前节点:{} 拒绝了{} 的申请票, 因为当前角色投票给了:{} 或者当前角色是: {}, 或者集群非选举态.",
                 raftNode.getSelf(), node, raftNode.getVoteFor(), raftNode.getRole());
         return RaftCommand.DENY;
     }
@@ -97,7 +97,7 @@ public class LeaderElection {
      */
     public synchronized void requestVote() {
 
-        logger.info("当前节点:{}, 角色:{}, 申请Leader选举, 成员组成数据:{}, 有:{}",
+        logger.debug("当前节点:{}, 角色:{}, 申请Leader选举, 成员组成数据:{}, 有:{}",
                 raftNode.getSelf(), raftNode.getRole(), cluster.getClusterMachine().length,
                 Arrays.toString(cluster.getClusterMachine()));
 
@@ -153,12 +153,12 @@ public class LeaderElection {
             /*
               给集群中, 除了自身机器之外的其它机器发起投票请求, 投票请求会立即得到答复.
             */
-            logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, 申请:{}的票", raftNode.getSelf(), clusterMachine);
+            logger.debug("当前节点:{} 申请Leader选举, 申请Leader选举, 申请:{}的票", raftNode.getSelf(), clusterMachine);
             try {
                 RaftCommand cmd = raftRpcLaunchService
                         .requestVote(raftNode.getSelf(), clusterMachine, raftNode.getTerm());
                 if (cmd == RaftCommand.ACCEPT) {
-                    logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, {}投递赞成票", raftNode.getSelf(), clusterMachine);
+                    logger.debug("当前节点:{} 申请Leader选举, 申请Leader选举, {}投递赞成票", raftNode.getSelf(), clusterMachine);
                     raftNode.increaseVoteCount();
                     // 得到多数派的赞成 => 成为 Leader
                     // 同时周知 Leader 的状态信息
@@ -169,11 +169,11 @@ public class LeaderElection {
                 } else if (cmd == RaftCommand.DENY) {
                     // TODO 如果被拒绝, 则累加term. 重新选举
                 } else {
-                    logger.info("当前节点:{} 申请Leader选举, 申请Leader选举, {}表态为: {}",
+                    logger.debug("当前节点:{} 申请Leader选举, 申请Leader选举, {}表态为: {}",
                             raftNode.getSelf(), clusterMachine, cmd);
                 }
             } catch (IOException e) {
-                logger.error("当前节点:{}申请客户机投票:{}, 网络异常.", raftNode.getSelf(), clusterMachine, e);
+                logger.debug("当前节点:{}申请客户机投票:{}, 网络异常.", raftNode.getSelf(), clusterMachine, e);
             }
         }
     }
@@ -188,7 +188,7 @@ public class LeaderElection {
         cluster.setClusterRole(ClusterRole.PROCESSING);
         raftServer.setRun(true);
 
-        logger.info("当前节点:{} 成为了新一届的Leader, 选举了{}次, 自身内容: {}", raftNode.getSelf(), time, raftNode);
+        logger.debug("当前节点:{} 成为了新一届的Leader, 选举了{}次, 自身内容: {}", raftNode.getSelf(), time, raftNode);
     }
 
 }

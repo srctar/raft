@@ -80,7 +80,7 @@ public class HeartBeatTimer implements Runnable {
                     long lastHeart = System.currentTimeMillis() - raftNodeRuntime.getLastHeartTime();
 
                     if (wait >= TIME_OUT && lastHeart > TIME_OUT) {
-                        logger.info("当前节点:{} 节点心跳反射, 等待超时. 节点信息:{}, ",
+                        logger.debug("当前节点:{} 节点心跳反射, 等待超时. 节点信息:{}, ",
                                 raftNodeRuntime.getSelf(), raftNodeRuntime);
                         // 2018年3月28日 选举线程不再是一个独立线程
                         // 每次选举都重置当前的选举态

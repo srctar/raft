@@ -186,7 +186,7 @@ public class RaftClient {
                 buildCluster(term, cmd.getResource());
                 raftNodeRuntime.setLastHeartTime(System.currentTimeMillis());
 
-                logger.info("当前节点:{}, 既定Follower关系, Leader:{}, 准备心跳反射.",
+                logger.debug("当前节点:{}, 既定Follower关系, Leader:{}, 准备心跳反射.",
                         raftNodeRuntime.getSelf(), raftNodeRuntime.getLeader());
                 if (heartBeatThread.isAlive()) {
                     // 中断旧线程, 重新等待
