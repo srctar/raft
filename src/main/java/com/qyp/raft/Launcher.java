@@ -22,6 +22,7 @@ import java.util.Set;
 import com.qyp.raft.data.ClusterRuntime;
 import com.qyp.raft.data.RaftNodeRuntime;
 import com.qyp.raft.data.RaftServerRole;
+import com.qyp.raft.data.t.ObjectDataTranslateService;
 import com.qyp.raft.rpc.CommunicateFollower;
 import com.qyp.raft.rpc.RaftRpcLaunch;
 import com.qyp.raft.rpc.RaftRpcLaunchService;
@@ -68,6 +69,8 @@ public class Launcher {
         if (!cluster.contains(contract)) {
             cluster.add(contract);
         }
+
+        new ObjectDataTranslateService();
 
         clusterRuntime = new ClusterRuntime();
         clusterRuntime.setClusterMachine(cluster.toArray(new String[]{}));
