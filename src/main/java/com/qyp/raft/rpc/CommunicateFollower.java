@@ -60,7 +60,8 @@ public class CommunicateFollower {
         this.clusterRuntime = clusterRuntime;
         this.raftRpcLaunchService = raftRpcLaunchService;
 
-        int size = clusterRuntime.getClusterMachine().length;
+        // 留给同步和心跳的用
+        int size = clusterRuntime.getClusterMachine().length + 1;
         executor = Executors.newFixedThreadPool(size);
 
         DestroyAdaptor.getInstance().add(new Destroyable() {
@@ -92,16 +93,18 @@ public class CommunicateFollower {
             int ty = 0;
             // 当给Follower发消息成功之后, 需要立即通知提交.
             // 目前尝试重试三次, 失败之后再停止提交.
-            while (!(record = syncFollower(new Sync() {
-                @Override
-                public RaftCommand doSync(String clusterMachine) throws IOException {
-                    return raftRpcLaunchService.notifyFollower(
-                            raftNodeRuntime.getSelf(), clusterMachine,
-                            raftNodeRuntime.getTerm(), RaftCommand.COMMIT);
-                }
-            })) && ty < 3) {
-                ty++;
+            do {
+                record = syncFollower(new Sync() {
+                    @Override
+                    public RaftCommand doSync(String clusterMachine) throws IOException {
+                        return raftRpcLaunchService.notifyFollower(
+                                raftNodeRuntime.getSelf(), clusterMachine,
+                                raftNodeRuntime.getTerm(), RaftCommand.COMMIT);
+                    }
+                });
+                ty ++;
             }
+            while (!record && ty < 3);
         }
         return record;
     }

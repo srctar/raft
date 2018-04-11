@@ -72,6 +72,7 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
 
     @Override
     public RaftCommand syncFollower(String self, String other, Object data) throws IOException {
-        return simpleRequest(self, other, -1, RaftCommand.SYNC_FOLLOWER, data, null);
+        // Leader机器向自己的端口发消息的时候, 会莫名其妙的鬼畜, 消息超时, 因此将所有对Follower的消息超时时间设置为200ms
+        return simpleRequest(self, other, -1, RaftCommand.SYNC_FOLLOWER, data, 200);
     }
 }
