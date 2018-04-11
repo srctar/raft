@@ -47,11 +47,8 @@ jar有传参, 供三位。
  > Raft 提供了一个功能不算是很强悍的启动器, 它位于 `com.qyp.raft.Launcher`, 里面详细的描述了Raft的启动流程. 如果你对这个启动器有什么不满意的地方, 请改变它.
  > 且看代码结构:
  
- 
- 入口：    |RaftRpcReceive(请修改它)|
-          -------------------------
-          |                       |
-          RaftServer              RaftClient
+[代码结构图](!
+https://dewqcsacre.oss-cn-beijing.aliyuncs.com/18-2-1/raft.png)
  
  当然你不会只需要一个仅能选举的集群, 你还需要将他放在可运行代码里, 使之协助你的集群成为一个分布式的集群. 你需要如下前期准备：
  
