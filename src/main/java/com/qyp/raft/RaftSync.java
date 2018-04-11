@@ -124,14 +124,7 @@ public class RaftSync {
                 return false;
             }
         } else {
-            DataTranslateService service = DataTranslateAdaptor.getInstance().get(o.getClass());
-            service = service == null ? DataTranslateAdaptor.getInstance().get(Object.class) : service;
-            try {
-                RaftCommand cmd = raftServer.sync(new TranslateData(o.getClass(), service.encode(o)));
-                return cmd == RaftCommand.APPEND_ENTRIES;
-            } catch (IOException e) {
-                return false;
-            }
+            return RaftCommand.APPEND_ENTRIES == raftServer.sync(o);
         }
     }
 

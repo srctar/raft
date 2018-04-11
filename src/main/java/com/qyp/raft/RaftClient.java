@@ -111,7 +111,6 @@ public class RaftClient {
      */
     public RaftCommand dealWithSync(StandardCommand cmd) {
 
-        logger.info("收到来自Leader端的同步请求.{}", cmd);
         // 只处理来自Leader的请求
         if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
                 && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {
@@ -124,16 +123,16 @@ public class RaftClient {
                     se = DataTranslateAdaptor.getInstance().get(Object.class);
                 }
                 try {
-                    Object translate = se.decode(byt, type);
-                    this.share = translate;
+                    this.share = se.decode(byt, type);
                 } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
+                    logger.info("Raft集群, 对象解析异常, 对象类型:{}", type, e);
                     return RaftCommand.APPEND_ENTRIES_DENY;
                 }
             }
+            logger.info("Raft集群, 收到来自Leader端的同步请求. 请求处理完毕. {}", cmd);
             return RaftCommand.APPEND_ENTRIES;
         }
-
+        logger.info("Raft集群, 收到来自Leader端的同步请求. 同步被拒绝...{}", cmd);
         return RaftCommand.APPEND_ENTRIES_DENY;
     }
 
@@ -145,7 +144,7 @@ public class RaftClient {
      */
     public synchronized RaftCommand dealWithCommit(StandardCommand cmd) {
 
-        logger.info("收到来自Leader端的同步提交请求.{}, 提交的数据是:{}", cmd, share);
+        logger.info("Raft集群, 收到来自Leader端的同步提交请求.{}, 提交的数据是:{}", cmd, share);
         // 只处理来自Leader的请求
         if (clusterRuntime.getClusterRole() == ClusterRole.PROCESSING
                 && cmd.getResource().equalsIgnoreCase(raftNodeRuntime.getLeader())) {

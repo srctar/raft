@@ -127,13 +127,15 @@ public class CommunicateFollower {
         int count = 0;
         for (Future<RaftCommand> f : futures) {
             try {
-                RaftCommand cmd = f.get(RaftServer.HEART_TIME, TimeUnit.MILLISECONDS);
+                // 超时时间需要设置较长, 否则会导致网络响应不及时
+                RaftCommand cmd = f.get(RaftServer.HEART_TIME * 2, TimeUnit.MILLISECONDS);
                 if (cmd == RaftCommand.APPEND_ENTRIES) {
                     count++;
                 }
-            } catch (InterruptedException e) {
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
             } catch (TimeoutException e) {
+                e.printStackTrace();
             }
         }
         return count == len;

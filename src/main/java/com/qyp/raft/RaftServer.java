@@ -76,11 +76,11 @@ public class RaftServer {
      * 当前的服务端对客户端的同步不支持队列, 即来一条同步命令处理一条.
      * 后续来到的消息直接拒绝.
      */
-    public RaftCommand sync(TranslateData data) {
+    public RaftCommand sync(Object data) {
         if (lock.tryLock()) {
-            logger.info("当前Raft角色:Leader, 正在处理Follower的同步请求...");
+            logger.info("Raft集群, 当前Raft角色:Leader, 正在处理Follower的同步请求...");
             try {
-                return communicateFollower.sync(data.getData()) ? RaftCommand.APPEND_ENTRIES : RaftCommand.APPEND_ENTRIES_AGAIN;
+                return communicateFollower.sync(data) ? RaftCommand.APPEND_ENTRIES : RaftCommand.APPEND_ENTRIES_AGAIN;
             } catch (Exception e) {
                 return RaftCommand.APPEND_ENTRIES_DENY;
             } finally {
