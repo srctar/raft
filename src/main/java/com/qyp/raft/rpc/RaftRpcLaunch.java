@@ -40,7 +40,7 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
 
     @Override
     public RaftCommand notifyFollower(String self, String other, int term, RaftCommand cmd) throws IOException {
-        return simpleRequest(self, other, term, cmd, null, null);
+        return simpleRequest(self, other, term, cmd, null, 200);
     }
 
     private RaftCommand simpleRequest(String self, String other, int term, RaftCommand cd, Object data, Integer timeOut)
@@ -72,7 +72,7 @@ public class RaftRpcLaunch implements RaftRpcLaunchService {
 
     @Override
     public RaftCommand syncFollower(String self, String other, Object data) throws IOException {
-        // Leader机器向自己的端口发消息的时候, 会莫名其妙的鬼畜, 消息超时, 因此将所有对Follower的消息超时时间设置为200ms
+        // Leader机器向自己的端口发消息的时候, 会莫名其妙的鬼畜, 消息超时, 因此将
         return simpleRequest(self, other, -1, RaftCommand.SYNC_FOLLOWER, data, 200);
     }
 }
