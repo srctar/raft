@@ -55,5 +55,94 @@ jar有传参, 供三位。
   - 同步使用: 通过调用`Launcher.getSync().sync(Object);` 来开始你的集群同步。
   - 接收同步: 通过继承并实现`com.qyp.raft.RaftWatcher`, 你便可以感知到每一次的同步。
   
- 针对如上三个问题, 请看下面的详细解释:
- 
+集群需要有发送、接收消息功能, 不仅限于Raft目前提供的解决方案。想使用集群同步功能, 需要实现类`com.qyp.raft.RaftWatcher`, 这样当`Launcher.getSync().sync(Object);`发起的变更生效时, 实现类便可以探测到.
+
+# 集成Demo
+
+此处以 Spring Boot 提供的一个小案例为例.
+```
+/**
+ * Spring Boot 的 raft 服务
+ *
+ * @author yupeng.qin
+ * @since 2018-04-10
+ */
+@Controller
+@EnableAutoConfiguration
+public class RaftController implements EmbeddedServletContainerCustomizer {
+
+    private static final Logger logger = LoggerFactory.getLogger(RaftController.class);
+
+    private Set<String> set = new HashSet<String>();
+    private Launcher launcher;
+
+    // 通过固定的配置, 提供服务发现能力
+    @PostConstruct
+    public void initRaft() {
+        set.add("192.168.179.1:10000");
+        set.add("192.168.179.1:20000");
+        set.add("192.168.179.1:30000");
+        set.add("192.168.179.1:40000");
+        set.add("192.168.179.1:50000");
+        int[] port = new int[]{10000, 20000, 30000, 40000, 50000};
+
+        int find = 0;
+        for (int p : port) {
+            try {
+                Socket s = new Socket();
+                s.bind(new InetSocketAddress("192.168.179.1", p));
+                find = p;
+                s.close();
+                break;
+            } catch (IOException e) {
+            }
+        }
+        // 集群的启动
+        launcher = new Launcher("192.168.179.1", find, set, true);
+    }
+
+    @RequestMapping("sync")
+    @ResponseBody
+    public boolean info(@RequestParam(value = "t", required = false) String t)
+            throws InterruptedException {
+        if (t != null) {
+            // 通过简单的代码调用, 使用集群同步功能
+            return Launcher.getSync().sync(t);
+        }
+        return Launcher.getSync().sync("123");
+    }
+
+
+
+    public static void main(String[] args) {
+        SpringApplication.run(RaftController.class);
+    }
+
+    // 基础信息采集
+    @RequestMapping("node")
+    @ResponseBody
+    public RaftNodeRuntime node() throws InterruptedException {
+        return launcher.getRaftNodeRuntime();
+    }
+
+    // 基础信息采集
+    @RequestMapping("cluster")
+    @ResponseBody
+    public ClusterRuntime cluster() throws InterruptedException {
+        return launcher.getClusterRuntime();
+    }
+
+}
+```
+通过类的编写使用变更通知功能
+```
+    @Service
+    public class Watcher extends RaftWatcher {
+
+        @Override
+        protected void sync(Object o) {
+
+            logger.info("传递的对象是:{}, {}", o, JsonUtils.read(o));
+        }
+    }
+```
