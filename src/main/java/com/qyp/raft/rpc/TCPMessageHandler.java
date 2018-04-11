@@ -74,7 +74,7 @@ class TCPMessageHandler {
                 try {
                     query = StandardCommand.toCommand(buffer.array());
                     answer = handleEachQuery(query);
-                } catch (ClassNotFoundException e) {
+                } catch (Exception e) {
                     answer = RaftCommand.DENY.name();
                 }
                 key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
